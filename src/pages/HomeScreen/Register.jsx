@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api.js";
+import { PAGE_URLS } from "../../App/config.js";
 
 export default function Register() {
     const navigate = useNavigate();
@@ -15,40 +17,102 @@ export default function Register() {
     });
 
     const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const { fullname, phone, dob, email, address, password, confirmPassword } =
-            formData;
+        const { fullname, phone, dob, email, address, password, confirmPassword } = formData;
 
+        console.log("Submitting registration form with data:", formData);
+
+        // Validate required fields
         if (!fullname || !phone || !dob || !email || !address || !password || !confirmPassword) {
-            setMessage("Please fill in all fields.");
+            setError("Please fill in all required fields.");
+            setMessage("");
             return;
         }
 
+        // Validate password match
         if (password !== confirmPassword) {
-            setMessage("Passwords do not match.");
+            setError("Passwords do not match.");
+            setMessage("");
             return;
         }
 
-        setMessage("Registration successful!");
-        setTimeout(() => navigate("/"), 1500);
+        // Validate password length
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long.");
+            setMessage("");
+            return;
+        }
+
+        // Validate email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError("Invalid email address.");
+            setMessage("");
+            return;
+        }
+
+        // Validate phone
+        const phoneRegex = /^0\d{9}$/;
+        if (!phoneRegex.test(phone)) {
+            setError("Phone number must have 10 digits and start with 0.");
+            setMessage("");
+            return;
+        }
+
+        // Validate date of birth
+        const dobDate = new Date(dob);
+        const today = new Date();
+        if (isNaN(dobDate.getTime()) || dobDate >= today) {
+            setError("Invalid date of birth (must be before today).");
+            setMessage("");
+            return;
+        }
+
+        // Prepare request
+        const registerRequest = {
+            phone,
+            password,
+            fullname,
+            email,
+            role: "CUSTOMER",
+            address,
+            dob,
+        };
+
+        console.log("Register request payload:", registerRequest);
+
+        try {
+            const response = await api.post("/auth/register", registerRequest);
+            console.log("Register API response:", response.data);
+
+            setMessage(response.data.message || "Registration successful! Please log in.");
+            setError("");
+
+            setTimeout(() => navigate(PAGE_URLS.LOGIN), 1500);
+        } catch (err) {
+            console.error("Register API error:", err.response || err);
+
+            const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
+            setError(errorMessage);
+            setMessage("");
+        }
     };
 
     return (
         <div className="min-h-screen bg-gray-700 flex flex-col items-center justify-center text-white relative px-10">
-            {/* Logo*/}
             <img
                 src="/img/logo.jpg"
                 alt="Logo"
                 className="absolute top-6 left-8 h-14 w-14 object-cover"
             />
 
-            {/* Form */}
             <div className="bg-gray-800 p-10 rounded-2xl shadow-2xl w-full max-w-2xl">
                 <h2 className="text-3xl font-bold mb-8 text-center">Register Account</h2>
 
@@ -161,10 +225,9 @@ export default function Register() {
                     </div>
                 </form>
 
-                {/* Message */}
-                {message && (
-                    <p className="mt-6 text-center text-sm text-green-400">{message}</p>
-                )}
+                {/* Messages */}
+                {message && <p className="mt-6 text-center text-sm text-green-400">{message}</p>}
+                {error && <p className="mt-6 text-center text-sm text-red-400">{error}</p>}
             </div>
         </div>
     );

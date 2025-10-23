@@ -17,16 +17,18 @@ export default function Home() {
       return;
     }
     setUser(storedUser);
-    fetchVehicles(storedUser.id);
+    fetchUserProfile(storedUser.id);
   }, []);
 
-  // Gọi API lấy danh sách xe của customer
-  const fetchVehicles = async (customerId) => {
+  // Gọi API lấy thông tin user, bao gồm danh sách xe
+  const fetchUserProfile = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:8080/api/customer/vehicle/details/${customerId}`);
-      setVehicles(Array.isArray(res.data) ? res.data : [res.data]);
+      const res = await axios.get(`http://localhost:8080/api/auth/profile/${id}`);
+      const userData = res.data;
+      setUser(userData);
+      setVehicles(Array.isArray(userData.vehicles) ? userData.vehicles : []);
     } catch (error) {
-      console.error("❌ Error fetching vehicles:", error);
+      console.error("❌ Error fetching user profile:", error);
     }
   };
 
@@ -94,16 +96,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Book Service Button */}
-      <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 flex justify-center">
-        <button
-          onClick={() => navigate("/dealer")}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg text-lg font-bold shadow-lg transition-all"
-        >
-          Book Service
-        </button>
-      </section>
-
       {/* Vehicle Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3">My Vehicles</h3>
@@ -119,18 +111,18 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <img
                     src="/img/bike1.jpg"
-                    alt={v.model}
+                    alt={v.model || "Vehicle"}
                     className="h-12 w-12 object-cover rounded"
                   />
-                  <span>{v.model}</span>
+                  <span>{v.model || "Unknown Model"}</span>
                 </div>
                 <button
                   className="text-sm text-gray-300 hover:text-white"
                   onClick={() =>
-                    navigate("/vehicledetail", { state: { vehicleId: v.id } })
+                    navigate("/vehicledetail", { state: { vehicleID: v.id } })
                   }
                 >
-                  View →
+                  View → 
                 </button>
               </div>
             ))
@@ -143,7 +135,7 @@ export default function Home() {
         >
           + Add My Vehicle
         </button>
-      </section>
+        </section>
 
       {/* Promotions Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
