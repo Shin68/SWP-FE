@@ -1,24 +1,26 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHome, FaCog, FaUsers } from "react-icons/fa";
-import { PAGE_URLS } from "../../App/config";
+import { FaHome, FaCog, FaWrench } from "react-icons/fa";
+import { technicianAccounts } from "../../utils/accountData";
 
-export default function StaffBookingList() {
+export default function TechnicianScreen() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   
-  const bookings = [
+  // Mock logged-in technician (in real app, this would come from auth context)
+  const currentTechnician = technicianAccounts[0]; // Robert Chen
+
+  const appointments = [
     {
       id: 1,
       customerName: "Nguyen Van A",
       phone: "09315162819",
       vehicle: "VinFast VF 8",
       serviceType: "Maintenance, Oil Change",
+      assignedBy: "Staff John",
       appointmentDate: "2025-10-24",
       appointmentTime: "09:00",
-      status: "Under Maintenance",
-      assigned: true,
-      assignedTechnician: "Robert Chen",
+      status: "In Progress",
       priority: "High"
     },
     {
@@ -27,11 +29,10 @@ export default function StaffBookingList() {
       phone: "08376920164",
       vehicle: "VinFast VF 9",
       serviceType: "Battery Check",
+      assignedBy: "Staff Sarah",
       appointmentDate: "2025-10-24",
       appointmentTime: "11:30",
-      status: "In Progress",
-      assigned: true,
-      assignedTechnician: "Lisa Anderson",
+      status: "Pending",
       priority: "Medium"
     },
     {
@@ -40,11 +41,10 @@ export default function StaffBookingList() {
       phone: "03682991423",
       vehicle: "VinFast VF e34",
       serviceType: "Tire Rotation",
+      assignedBy: "Staff Mike",
       appointmentDate: "2025-10-24",
       appointmentTime: "14:00",
-      status: "Booked",
-      assigned: false,
-      assignedTechnician: "Not Assigned",
+      status: "Completed",
       priority: "Low"
     },
     {
@@ -53,25 +53,11 @@ export default function StaffBookingList() {
       phone: "09123456789",
       vehicle: "VinFast VF 5",
       serviceType: "Brake Inspection",
+      assignedBy: "Staff John",
       appointmentDate: "2025-10-25",
       appointmentTime: "10:00",
       status: "Pending",
-      assigned: false,
-      assignedTechnician: "Not Assigned",
       priority: "High"
-    },
-    {
-      id: 5,
-      customerName: "Le Van E",
-      phone: "0987654321",
-      vehicle: "VinFast VF 8 Plus",
-      serviceType: "Software Update",
-      appointmentDate: "2025-10-25",
-      appointmentTime: "15:30",
-      status: "Confirmed",
-      assigned: true,
-      assignedTechnician: "Thomas Brown",
-      priority: "Medium"
     }
   ];
 
@@ -83,12 +69,6 @@ export default function StaffBookingList() {
         return "bg-blue-100 text-blue-800";
       case "Completed":
         return "bg-green-100 text-green-800";
-      case "Under Maintenance":
-        return "bg-orange-100 text-orange-800";
-      case "Booked":
-        return "bg-purple-100 text-purple-800";
-      case "Confirmed":
-        return "bg-teal-100 text-teal-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -112,8 +92,13 @@ export default function StaffBookingList() {
       {/* Header */}
       <header className="bg-gray-800 p-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <FaUsers size={24} />
-          <span className="font-bold text-lg">Staff Portal</span>
+          <FaWrench size={24} />
+          <div>
+            <span className="font-bold text-lg">Technician Portal</span>
+            <div className="text-xs text-gray-400">
+              {currentTechnician.name} • {currentTechnician.level} • ⭐ {currentTechnician.rating}
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-4 items-center relative">
@@ -163,21 +148,15 @@ export default function StaffBookingList() {
       {/* Main Content */}
       <div className="p-4">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Appointment Management</h2>
-          <div className="flex gap-2 text-sm">
+          <h2 className="text-2xl font-semibold">Assigned Appointments</h2>
+          <div className="text-sm">
             <span className="bg-gray-600 px-3 py-1 rounded">
-              Total: {bookings.length}
-            </span>
-            <span className="bg-green-600 px-3 py-1 rounded">
-              Assigned: {bookings.filter(b => b.assigned).length}
-            </span>
-            <span className="bg-red-600 px-3 py-1 rounded">
-              Unassigned: {bookings.filter(b => !b.assigned).length}
+              Total: {appointments.length} appointments
             </span>
           </div>
         </div>
 
-        {/* Bookings Table */}
+        {/* Appointments Table */}
         <div className="bg-gray-800 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -196,10 +175,10 @@ export default function StaffBookingList() {
                     Service
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                    Date & Time
+                    Assigned By
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                    Technician
+                    Date & Time
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">
                     Priority
@@ -213,67 +192,57 @@ export default function StaffBookingList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {bookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-gray-700">
-                    <td className="px-4 py-3 text-sm">#{booking.id}</td>
+                {appointments.map((appointment) => (
+                  <tr key={appointment.id} className="hover:bg-gray-700">
+                    <td className="px-4 py-3 text-sm">#{appointment.id}</td>
                     <td className="px-4 py-3 text-sm">
                       <div>
-                        <div className="font-medium">{booking.customerName}</div>
+                        <div className="font-medium">{appointment.customerName}</div>
                         <div className="text-gray-400 text-xs">
-                          <a href={`tel:${booking.phone}`} className="hover:text-blue-400">
-                            {booking.phone}
+                          <a href={`tel:${appointment.phone}`} className="hover:text-blue-400">
+                            {appointment.phone}
                           </a>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{booking.vehicle}</td>
-                    <td className="px-4 py-3 text-sm">{booking.serviceType}</td>
+                    <td className="px-4 py-3 text-sm">{appointment.vehicle}</td>
+                    <td className="px-4 py-3 text-sm">{appointment.serviceType}</td>
+                    <td className="px-4 py-3 text-sm">{appointment.assignedBy}</td>
                     <td className="px-4 py-3 text-sm">
                       <div>
-                        <div>{booking.appointmentDate}</div>
-                        <div className="text-gray-400 text-xs">{booking.appointmentTime}</div>
+                        <div>{appointment.appointmentDate}</div>
+                        <div className="text-gray-400 text-xs">{appointment.appointmentTime}</div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`text-xs ${booking.assigned ? 'text-green-400' : 'text-red-400'}`}>
-                        {booking.assignedTechnician}
+                      <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(appointment.priority)}`}>
+                        {appointment.priority}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(booking.priority)}`}>
-                        {booking.priority}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(booking.status)}`}>
-                        {booking.status}
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(appointment.status)}`}>
+                        {appointment.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex gap-2">
                         <button
                           className="text-blue-400 hover:text-blue-300 text-xs"
-                          onClick={() => console.log("View details", booking.id)}
+                          onClick={() => console.log("View details", appointment.id)}
                         >
                           View
                         </button>
                         <button
                           className="text-green-400 hover:text-green-300 text-xs"
-                          onClick={() => console.log("Update status", booking.id)}
+                          onClick={() => console.log("Update status", appointment.id)}
                         >
                           Update
                         </button>
                         <button
-                          className="text-purple-400 hover:text-purple-300 text-xs"
-                          onClick={() => navigate(`${PAGE_URLS.SELECT_TECHNICIAN}/${booking.id}`)}
-                        >
-                          {booking.assigned ? "Reassign" : "Assign"}
-                        </button>
-                        <button
                           className="text-yellow-400 hover:text-yellow-300 text-xs"
-                          onClick={() => console.log("Send notification", booking.id)}
+                          onClick={() => console.log("Add notes", appointment.id)}
                         >
-                          Notify
+                          Notes
                         </button>
                       </div>
                     </td>

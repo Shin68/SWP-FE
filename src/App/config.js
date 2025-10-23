@@ -18,7 +18,7 @@ export const PAGE_URLS = {
   REGISTER: '/register',
   SELECT_TECHNICIAN: '/staff/select-technician',
   STAFF_BOOKING_LIST: '/staff/bookings',
-  CREATE_STAFF_ACCOUNT: '/staff/create-account',
+  TECHNICIAN_SCREEN: '/technician',
   SELECT_VEHICLE: '/select-vehicle',
 };
 

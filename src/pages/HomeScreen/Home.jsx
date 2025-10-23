@@ -8,7 +8,7 @@ export default function Home() {
 
   const handleLogout = () => {
     console.log("User logged out");
-    navigate("/login");
+    navigate("/");
   };
 
   return (

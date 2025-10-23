@@ -1,27 +1,31 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAccountByPhone } from "../../utils/accountData";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
-  const accounts = [
-    { phone: "0123456789", password: "123456" }
-  ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const account = accounts.find(
-      (acc) => acc.phone === phone && acc.password === password
-    );
+    const account = getAccountByPhone(phone);
 
-    if (account) {
-      setMessage("Login successful!");
-      setTimeout(() => navigate("/home"), 1000);
+    if (account && account.password === password) {
+      setMessage(`Login successful! Welcome ${account.name} (${account.role})`);
+      setTimeout(() => {
+        if (account.role === "Technician") {
+          navigate("/technician");
+        } else if (account.role === "Staff") {
+          navigate("/staff/bookings");
+        } else {
+          navigate("/home");
+        }
+      }, 1500);
     } else {
-      setMessage("Please enter phone number and password");
+      setMessage("Invalid phone number or password");
     }
   };
 
