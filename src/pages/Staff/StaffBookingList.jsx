@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaCog, FaUsers } from "react-icons/fa";
 import { PAGE_URLS } from "../../App/config";
@@ -6,74 +6,114 @@ import { PAGE_URLS } from "../../App/config";
 export default function StaffBookingList() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [bookings, setBookings] = useState([]);
   
-  const bookings = [
-    {
-      id: 1,
-      customerName: "Nguyen Van A",
-      phone: "09315162819",
-      vehicle: "VinFast VF 8",
-      serviceType: "Maintenance, Oil Change",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "09:00",
-      status: "Under Maintenance",
-      assigned: true,
-      assignedTechnician: "Robert Chen",
-      priority: "High"
-    },
-    {
-      id: 2,
-      customerName: "Vo Van B",
-      phone: "08376920164",
-      vehicle: "VinFast VF 9",
-      serviceType: "Battery Check",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "11:30",
-      status: "In Progress",
-      assigned: true,
-      assignedTechnician: "Lisa Anderson",
-      priority: "Medium"
-    },
-    {
-      id: 3,
-      customerName: "Nguyen Le C",
-      phone: "03682991423",
-      vehicle: "VinFast VF e34",
-      serviceType: "Tire Rotation",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "14:00",
-      status: "Booked",
-      assigned: false,
-      assignedTechnician: "Not Assigned",
-      priority: "Low"
-    },
-    {
-      id: 4,
-      customerName: "Tran Thi D",
-      phone: "09123456789",
-      vehicle: "VinFast VF 5",
-      serviceType: "Brake Inspection",
-      appointmentDate: "2025-10-25",
-      appointmentTime: "10:00",
-      status: "Pending",
-      assigned: false,
-      assignedTechnician: "Not Assigned",
-      priority: "High"
-    },
-    {
-      id: 5,
-      customerName: "Le Van E",
-      phone: "0987654321",
-      vehicle: "VinFast VF 8 Plus",
-      serviceType: "Software Update",
-      appointmentDate: "2025-10-25",
-      appointmentTime: "15:30",
-      status: "Confirmed",
-      assigned: true,
-      assignedTechnician: "Thomas Brown",
-      priority: "Medium"
+  // Initialize bookings data
+  useEffect(() => {
+    const storedBookings = localStorage.getItem('staffBookings');
+    if (storedBookings) {
+      setBookings(JSON.parse(storedBookings));
+    } else {
+      // Initialize with default data if not exists
+      const defaultBookings = [
+        {
+          id: 1,
+          customerName: "Nguyen Van A",
+          phone: "09315162819",
+          vehicle: "VinFast VF 8",
+          serviceType: "Maintenance, Oil Change",
+          appointmentDate: "2025-10-24",
+          appointmentTime: "09:00",
+          status: "Under Maintenance",
+          assigned: true,
+          assignedTechnician: "Robert Chen",
+          priority: "High"
+        },
+        {
+          id: 2,
+          customerName: "Vo Van B",
+          phone: "08376920164",
+          vehicle: "VinFast VF 9",
+          serviceType: "Battery Check",
+          appointmentDate: "2025-10-24",
+          appointmentTime: "11:30",
+          status: "In Progress",
+          assigned: true,
+          assignedTechnician: "Lisa Anderson",
+          priority: "Medium"
+        },
+        {
+          id: 3,
+          customerName: "Nguyen Le C",
+          phone: "03682991423",
+          vehicle: "VinFast VF e34",
+          serviceType: "Tire Rotation",
+          appointmentDate: "2025-10-24",
+          appointmentTime: "14:00",
+          status: "Booked",
+          assigned: false,
+          assignedTechnician: "Not Assigned",
+          priority: "Low"
+        },
+        {
+          id: 4,
+          customerName: "Tran Thi D",
+          phone: "09123456789",
+          vehicle: "VinFast VF 5",
+          serviceType: "Brake Inspection",
+          appointmentDate: "2025-10-25",
+          appointmentTime: "10:00",
+          status: "Pending",
+          assigned: false,
+          assignedTechnician: "Not Assigned",
+          priority: "High"
+        },
+        {
+          id: 5,
+          customerName: "Le Van E",
+          phone: "0987654321",
+          vehicle: "VinFast VF 8 Plus",
+          serviceType: "Software Update",
+          appointmentDate: "2025-10-25",
+          appointmentTime: "15:30",
+          status: "Confirmed",
+          assigned: true,
+          assignedTechnician: "Thomas Brown",
+          priority: "Medium"
+        }
+      ];
+      localStorage.setItem('staffBookings', JSON.stringify(defaultBookings));
+      setBookings(defaultBookings);
     }
-  ];
+  }, []);
+
+  // Refresh bookings data when component mounts or when navigating back
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedBookings = localStorage.getItem('staffBookings');
+      if (storedBookings) {
+        setBookings(JSON.parse(storedBookings));
+      }
+    };
+
+    // Listen for storage changes
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check for changes when component gets focus
+    const handleFocus = () => {
+      const storedBookings = localStorage.getItem('staffBookings');
+      if (storedBookings) {
+        setBookings(JSON.parse(storedBookings));
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -147,7 +187,7 @@ export default function StaffBookingList() {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/login");
+                    navigate("/");
                     setMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-red-600 font-bold hover:bg-red-100"
@@ -253,27 +293,15 @@ export default function StaffBookingList() {
                       <div className="flex gap-2">
                         <button
                           className="text-blue-400 hover:text-blue-300 text-xs"
-                          onClick={() => console.log("View details", booking.id)}
+                          onClick={() => navigate(`/staff/appointment/${booking.id}`)}
                         >
-                          View
-                        </button>
-                        <button
-                          className="text-green-400 hover:text-green-300 text-xs"
-                          onClick={() => console.log("Update status", booking.id)}
-                        >
-                          Update
+                          View Detail
                         </button>
                         <button
                           className="text-purple-400 hover:text-purple-300 text-xs"
                           onClick={() => navigate(`${PAGE_URLS.SELECT_TECHNICIAN}/${booking.id}`)}
                         >
-                          {booking.assigned ? "Reassign" : "Assign"}
-                        </button>
-                        <button
-                          className="text-yellow-400 hover:text-yellow-300 text-xs"
-                          onClick={() => console.log("Send notification", booking.id)}
-                        >
-                          Notify
+                          {booking.assigned ? "Reassign" : "Assign Technician"}
                         </button>
                       </div>
                     </td>
@@ -284,13 +312,7 @@ export default function StaffBookingList() {
           </div>
         </div>
 
-        {/* Back Button */}
-        <button
-          onClick={() => navigate("/home")}
-          className="mt-6 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          ← Back to Home
-        </button>
+        
       </div>
     </div>
   );

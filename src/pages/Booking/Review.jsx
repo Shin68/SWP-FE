@@ -49,7 +49,7 @@ export default function Review() {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/login");
+                    navigate("/");
                     setMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-red-600 font-bold hover:bg-red-100"
@@ -103,7 +103,8 @@ export default function Review() {
           <button
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
             onClick={() => {
-              alert("✅ Booking confirmed!");
+              setMessage("Booking confirmed! Thank you for choosing our service.");
+              setTimeout(() => setMessage(""), 3000);
               navigate("/home");
             }}
           >

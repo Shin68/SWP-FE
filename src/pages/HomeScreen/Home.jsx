@@ -1,13 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaCog, FaStar, FaMapMarkerAlt, FaPhoneAlt } from "react-icons/fa";
+import { getCustomerByPhone } from "../../utils/accountData";
 
 export default function Home() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Get logged-in user from localStorage
+    const userData = localStorage.getItem('loggedInUser');
+    if (userData) {
+      const user = JSON.parse(userData);
+      if (user.role === 'Customer') {
+        // Get full customer data including vehicles
+        const fullCustomerData = getCustomerByPhone(user.phone);
+        setCurrentUser(fullCustomerData || user);
+      } else {
+        setCurrentUser(user);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
-    console.log("User logged out");
+    localStorage.removeItem('loggedInUser');
     navigate("/");
   };
 
@@ -66,8 +83,15 @@ export default function Home() {
           className="h-16 w-16 rounded-full border-2 border-white"
         />
         <div>
-          <h2 className="text-xl font-semibold">Tran Quang Hieu</h2>
-          <p className="text-sm text-gray-300">0123456789</p>
+          <h2 className="text-xl font-semibold">{currentUser?.name || 'Guest'}</h2>
+          <p className="text-sm text-gray-300">{currentUser?.phone || 'No phone'}</p>
+          {currentUser?.role === 'Customer' && (
+            <div className="flex gap-4 mt-1 text-xs text-gray-400">
+              <span>📅 Member since {currentUser?.joinDate}</span>
+              <span>🎯 {currentUser?.totalBookings || 0} bookings</span>
+              <span>⭐ {currentUser?.loyaltyPoints || 0} points</span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -84,60 +108,44 @@ export default function Home() {
       {/* Vehicle Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3">My Vehicles</h3>
-        <div className="flex flex-col gap-2">
-          {[
-            {
-              name: "Felix2025",
-              img: (
-                <img
-                  src="/img/bike1.jpg"
-                  alt="Felix2025"
-                  className="h-12 w-12 object-cover rounded"
-                />
-              ),
-            },
-            {
-              name: "Evo Neo",
-              img: (
-                <img
-                  src="/img/bike2.jpg"
-                  alt="Evo Neo"
-                  className="h-12 w-12 object-cover rounded"
-                />
-              ),
-            },
-            {
-              name: "Klara Neo",
-              img: (
-                <img
-                  src="/img/bike3.jpg"
-                  alt="Klara Neo"
-                  className="h-12 w-12 object-cover rounded"
-                />
-              ),
-            },
-          ].map((bike, index) => (
-            <div
-              key={bike.name}
-              className="flex justify-between items-center bg-gray-500 rounded-md p-2"
-            >
-              <div className="flex items-center gap-3">
-                {bike.img}
-                <span>{bike.name}</span>
-              </div>
-              <button
-                className="text-sm text-gray-300 hover:text-white"
-                onClick={() =>
-                  navigate("/vehicledetail", {
-                    state: { vehicleName: bike.name },
-                  })
-                }
+        {currentUser?.role === 'Customer' && currentUser?.vehicles?.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {currentUser.vehicles.map((vehicle, index) => (
+              <div
+                key={vehicle.id}
+                className="flex justify-between items-center bg-gray-500 rounded-md p-3"
               >
-                View →
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="flex items-center gap-3">
+                  <img
+                    src="/img/ev.jpg"
+                    alt={vehicle.model}
+                    className="h-12 w-12 object-cover rounded"
+                  />
+                  <div>
+                    <div className="font-medium">{vehicle.make} {vehicle.model}</div>
+                    <div className="text-xs text-gray-400">
+                      {vehicle.year} • {vehicle.licensePlate} • {vehicle.mileage.toLocaleString()} km
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="text-sm text-gray-300 hover:text-white"
+                  onClick={() =>
+                    navigate("/vehicledetail", {
+                      state: { vehicle },
+                    })
+                  }
+                >
+                  View →
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-400 py-4">
+            <p>No vehicles registered</p>
+          </div>
+        )}
         <button
           onClick={() => navigate("/vehicle-list")}
           className="mt-3 w-full bg-gray-800 hover:bg-gray-900 text-sm py-2 rounded"

@@ -166,6 +166,140 @@ export const technicianAccounts = [
   }
 ];
 
+// Customer Accounts Data
+export const customerAccounts = [
+  {
+    id: 201,
+    name: "Tran Minh Quan",
+    phone: "0901234567",
+    email: "tran.minh.quan@email.com",
+    password: "customer123",
+    role: "Customer",
+    joinDate: "2024-03-15",
+    status: "Active",
+    vehicles: [
+      {
+        id: 1,
+        make: "VinFast",
+        model: "VF 8",
+        year: 2023,
+        vin: "VF8A123456789",
+        licensePlate: "30A-12345",
+        color: "Pearl White",
+        mileage: 15000
+      }
+    ],
+    totalBookings: 8,
+    loyaltyPoints: 1200
+  },
+  {
+    id: 202,
+    name: "Le Thi Mai Anh",
+    phone: "0902345678",
+    email: "le.thi.mai.anh@email.com",
+    password: "customer123",
+    role: "Customer",
+    joinDate: "2024-01-20",
+    status: "Active",
+    vehicles: [
+      {
+        id: 2,
+        make: "VinFast",
+        model: "VF 9",
+        year: 2023,
+        vin: "VF9B987654321",
+        licensePlate: "51B-67890",
+        color: "Midnight Black",
+        mileage: 22000
+      },
+      {
+        id: 3,
+        make: "VinFast",
+        model: "VF e34",
+        year: 2022,
+        vin: "VFE34C555666777",
+        licensePlate: "43C-11111",
+        color: "Sky Blue",
+        mileage: 35000
+      }
+    ],
+    totalBookings: 15,
+    loyaltyPoints: 2100
+  },
+  {
+    id: 203,
+    name: "Nguyen Van Huy",
+    phone: "0903456789",
+    email: "nguyen.van.huy@email.com",
+    password: "customer123",
+    role: "Customer",
+    joinDate: "2023-11-10",
+    status: "Active",
+    vehicles: [
+      {
+        id: 4,
+        make: "VinFast",
+        model: "VF 5",
+        year: 2023,
+        vin: "VF5D888999000",
+        licensePlate: "59D-22222",
+        color: "Red",
+        mileage: 8000
+      }
+    ],
+    totalBookings: 5,
+    loyaltyPoints: 750
+  },
+  {
+    id: 204,
+    name: "Pham Thi Thu Trang",
+    phone: "0904567890",
+    email: "pham.thi.thu.trang@email.com",
+    password: "customer123",
+    role: "Customer",
+    joinDate: "2024-02-28",
+    status: "Active",
+    vehicles: [
+      {
+        id: 5,
+        make: "VinFast",
+        model: "VF 8 Plus",
+        year: 2024,
+        vin: "VF8E111222333",
+        licensePlate: "47E-33333",
+        color: "Silver",
+        mileage: 5000
+      }
+    ],
+    totalBookings: 3,
+    loyaltyPoints: 450
+  },
+  {
+    id: 205,
+    name: "Hoang Tuan Anh",
+    phone: "0905678901",
+    email: "hoang.tuan.anh@email.com",
+    password: "customer123",
+    role: "Customer",
+    joinDate: "2023-09-05",
+    status: "Active",
+    vehicles: [
+      {
+        id: 6,
+        make: "VinFast",
+        model: "VF 9",
+        year: 2023,
+        vin: "VF9F444555666",
+        licensePlate: "37F-44444",
+        color: "Forest Green",
+        mileage: 18000
+      }
+    ],
+    totalBookings: 12,
+    loyaltyPoints: 1800
+  }
+];
+
 // Combined accounts for login validation
 export const allAccounts = [
   ...staffAccounts.map(staff => ({
@@ -181,6 +315,13 @@ export const allAccounts = [
     role: tech.role,
     name: tech.name,
     id: tech.id
+  })),
+  ...customerAccounts.map(customer => ({
+    phone: customer.phone,
+    password: customer.password,
+    role: customer.role,
+    name: customer.name,
+    id: customer.id
   }))
 ];
 
@@ -203,4 +344,12 @@ export const getAvailableTechnicians = () => {
 
 export const getStaffByDepartment = (department) => {
   return staffAccounts.filter(staff => staff.department === department);
+};
+
+export const getCustomerById = (id) => {
+  return customerAccounts.find(customer => customer.id === id);
+};
+
+export const getCustomerByPhone = (phone) => {
+  return customerAccounts.find(customer => customer.phone === phone);
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaCog, FaWrench } from "react-icons/fa";
 import { technicianAccounts } from "../../utils/accountData";
@@ -6,60 +6,80 @@ import { technicianAccounts } from "../../utils/accountData";
 export default function TechnicianScreen() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [appointments, setAppointments] = useState([]);
   
-  // Mock logged-in technician (in real app, this would come from auth context)
-  const currentTechnician = technicianAccounts[0]; // Robert Chen
-
-  const appointments = [
-    {
-      id: 1,
-      customerName: "Nguyen Van A",
-      phone: "09315162819",
-      vehicle: "VinFast VF 8",
-      serviceType: "Maintenance, Oil Change",
-      assignedBy: "Staff John",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "09:00",
-      status: "In Progress",
-      priority: "High"
-    },
-    {
-      id: 2,
-      customerName: "Vo Van B",
-      phone: "08376920164",
-      vehicle: "VinFast VF 9",
-      serviceType: "Battery Check",
-      assignedBy: "Staff Sarah",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "11:30",
-      status: "Pending",
-      priority: "Medium"
-    },
-    {
-      id: 3,
-      customerName: "Nguyen Le C",
-      phone: "03682991423",
-      vehicle: "VinFast VF e34",
-      serviceType: "Tire Rotation",
-      assignedBy: "Staff Mike",
-      appointmentDate: "2025-10-24",
-      appointmentTime: "14:00",
-      status: "Completed",
-      priority: "Low"
-    },
-    {
-      id: 4,
-      customerName: "Tran Thi D",
-      phone: "09123456789",
-      vehicle: "VinFast VF 5",
-      serviceType: "Brake Inspection",
-      assignedBy: "Staff John",
-      appointmentDate: "2025-10-25",
-      appointmentTime: "10:00",
-      status: "Pending",
-      priority: "High"
+  // Get logged-in technician from localStorage or fallback to first technician
+  const [currentTechnician, setCurrentTechnician] = useState(null);
+  
+  useEffect(() => {
+    const userData = localStorage.getItem('loggedInUser');
+    if (userData) {
+      const user = JSON.parse(userData);
+      if (user.role === 'Technician') {
+        const fullTechnicianData = technicianAccounts.find(tech => tech.phone === user.phone);
+        setCurrentTechnician(fullTechnicianData || technicianAccounts[0]);
+      } else {
+        setCurrentTechnician(technicianAccounts[0]); // Fallback for testing
+      }
+    } else {
+      setCurrentTechnician(technicianAccounts[0]); // Fallback for testing
     }
-  ];
+  }, []);
+
+  // Load appointments from localStorage
+  useEffect(() => {
+    if (!currentTechnician) return;
+    
+    const loadAppointments = () => {
+      const storedBookings = localStorage.getItem('staffBookings');
+      if (storedBookings) {
+        const bookings = JSON.parse(storedBookings);
+        console.log('All bookings:', bookings);
+        console.log('Current technician:', currentTechnician.name);
+        
+        // Filter appointments assigned to current technician
+        const technicianAppointments = bookings
+          .filter(booking => booking.assignedTechnician === currentTechnician.name)
+          .map(booking => ({
+            ...booking,
+            assignedBy: "Staff" // Generic assignment since we don't track who assigned
+          }));
+        
+        console.log('Filtered appointments for technician:', technicianAppointments);
+        
+        // If no appointments found for this technician, show all for testing
+        if (technicianAppointments.length === 0) {
+          console.log('No appointments found for this technician, showing all assigned bookings');
+          const allAssignedBookings = bookings
+            .filter(booking => booking.assigned && booking.assignedTechnician !== "Not Assigned")
+            .map(booking => ({
+              ...booking,
+              assignedBy: "Staff"
+            }));
+          setAppointments(allAssignedBookings);
+        } else {
+          setAppointments(technicianAppointments);
+        }
+      } else {
+        console.log('No bookings found in localStorage');
+      }
+    };
+
+    loadAppointments();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      loadAppointments();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', handleStorageChange);
+    };
+  }, [currentTechnician]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -96,7 +116,10 @@ export default function TechnicianScreen() {
           <div>
             <span className="font-bold text-lg">Technician Portal</span>
             <div className="text-xs text-gray-400">
-              {currentTechnician.name} • {currentTechnician.level} • ⭐ {currentTechnician.rating}
+              {currentTechnician ? 
+                `${currentTechnician.name} • ${currentTechnician.level} • ⭐ ${currentTechnician.rating}` : 
+                'Loading technician information...'
+              }
             </div>
           </div>
         </div>
@@ -132,7 +155,7 @@ export default function TechnicianScreen() {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/login");
+                    navigate("/");
                     setMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-red-600 font-bold hover:bg-red-100"
@@ -147,14 +170,31 @@ export default function TechnicianScreen() {
 
       {/* Main Content */}
       <div className="p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Assigned Appointments</h2>
-          <div className="text-sm">
-            <span className="bg-gray-600 px-3 py-1 rounded">
-              Total: {appointments.length} appointments
-            </span>
+        {!currentTechnician ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading technician information...</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold">Assigned Appointments</h2>
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                >
+                  Refresh
+                </button>
+                <div className="text-sm">
+                  <span className="bg-gray-600 px-3 py-1 rounded">
+                    Total: {appointments.length} appointments
+                  </span>
+                </div>
+              </div>
+            </div>
 
         {/* Appointments Table */}
         <div className="bg-gray-800 rounded-lg overflow-hidden">
@@ -228,21 +268,15 @@ export default function TechnicianScreen() {
                       <div className="flex gap-2">
                         <button
                           className="text-blue-400 hover:text-blue-300 text-xs"
-                          onClick={() => console.log("View details", appointment.id)}
+                          onClick={() => navigate(`/technician/appointment/${appointment.id}`)}
                         >
                           View
                         </button>
                         <button
-                          className="text-green-400 hover:text-green-300 text-xs"
-                          onClick={() => console.log("Update status", appointment.id)}
+                          className="text-orange-400 hover:text-orange-300 text-xs"
+                          onClick={() => navigate(`/technician/maintenance-report/${appointment.id}`)}
                         >
-                          Update
-                        </button>
-                        <button
-                          className="text-yellow-400 hover:text-yellow-300 text-xs"
-                          onClick={() => console.log("Add notes", appointment.id)}
-                        >
-                          Notes
+                          Maintenance Report
                         </button>
                       </div>
                     </td>
@@ -253,13 +287,25 @@ export default function TechnicianScreen() {
           </div>
         </div>
 
-        {/* Back Button */}
-        <button
-          onClick={() => navigate("/home")}
-          className="mt-6 bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          ← Back to Home
-        </button>
+        {appointments.length === 0 && (
+          <div className="bg-gray-800 rounded-lg p-8 text-center">
+            <p className="text-gray-400 text-lg">No appointments assigned to you</p>
+            <p className="text-gray-500 text-sm mt-2">
+              {currentTechnician ? 
+                `Currently logged in as: ${currentTechnician.name}` : 
+                'Loading technician information...'
+              }
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+            >
+              Refresh Data
+            </button>
+          </div>
+        )}
+          </>
+        )}
       </div>
     </div>
   );

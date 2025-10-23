@@ -13,8 +13,25 @@ export default function SelectTechnician() {
   const handleConfirm = () => {
     if (selected) {
       const selectedTechnician = technicians.find(tech => tech.id === selected);
+      
+      // Update the booking data in localStorage
+      const existingBookings = JSON.parse(localStorage.getItem('staffBookings') || '[]');
+      const updatedBookings = existingBookings.map(booking => {
+        if (booking.id === parseInt(bookingId)) {
+          return {
+            ...booking,
+            assigned: true,
+            assignedTechnician: selectedTechnician.name,
+            status: "Confirmed",
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return booking;
+      });
+      
+      localStorage.setItem('staffBookings', JSON.stringify(updatedBookings));
+      
       console.log(`Assigned technician ${selectedTechnician.name} to booking ${bookingId}`);
-      // In a real app, this would update the database
       navigate(PAGE_URLS.STAFF_BOOKING_LIST);
     } else {
       alert("Please select a technician first");

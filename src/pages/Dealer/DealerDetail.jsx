@@ -58,7 +58,7 @@ export default function DealerDetail() {
                 </button>
                 <button
                   onClick={() => {
-                    navigate("/login");
+                    navigate("/");
                     setMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-red-600 font-bold hover:bg-red-100"

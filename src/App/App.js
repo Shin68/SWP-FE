@@ -14,7 +14,10 @@ import BookingDetail from "../pages/Booking/BookingDetail";
 import Review from "../pages/Booking/Review";
 import SelectTechnician from "../pages/Staff/SelectTechnician";
 import StaffBookingList from "../pages/Staff/StaffBookingList";
+import AppointmentDetail from "../pages/Staff/AppointmentDetail";
 import TechnicianScreen from "../pages/Technician/TechnicianScreen";
+import TechnicianAppointmentDetail from "../pages/Technician/AppointmentDetail";
+import MaintenanceReport from "../pages/Technician/MaintenanceReport";
 import SelectVehicle from "../pages/Vehicle/SelectVehicle";
 import { PAGE_URLS } from "./config";
 
@@ -37,7 +40,10 @@ function App() {
         <Route path={PAGE_URLS.REVIEW} element={<Review />} />
         <Route path={PAGE_URLS.SELECT_TECHNICIAN + "/:bookingId"} element={<SelectTechnician />} />
         <Route path={PAGE_URLS.STAFF_BOOKING_LIST} element={<StaffBookingList />} />
+        <Route path={PAGE_URLS.APPOINTMENT_DETAIL} element={<AppointmentDetail />} />
         <Route path={PAGE_URLS.TECHNICIAN_SCREEN} element={<TechnicianScreen />} />
+        <Route path={PAGE_URLS.TECHNICIAN_APPOINTMENT_DETAIL} element={<TechnicianAppointmentDetail />} />
+        <Route path={PAGE_URLS.MAINTENANCE_REPORT} element={<MaintenanceReport />} />
         <Route path={PAGE_URLS.SELECT_VEHICLE} element={<SelectVehicle />} />
 
       </Routes>

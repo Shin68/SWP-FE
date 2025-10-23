@@ -14,12 +14,16 @@ export default function Login() {
     const account = getAccountByPhone(phone);
 
     if (account && account.password === password) {
+      // Store logged-in user data in localStorage
+      localStorage.setItem('loggedInUser', JSON.stringify(account));
       setMessage(`Login successful! Welcome ${account.name} (${account.role})`);
       setTimeout(() => {
         if (account.role === "Technician") {
           navigate("/technician");
         } else if (account.role === "Staff") {
           navigate("/staff/bookings");
+        } else if (account.role === "Customer") {
+          navigate("/home");
         } else {
           navigate("/home");
         }
