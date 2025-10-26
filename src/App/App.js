@@ -19,6 +19,7 @@ import TechnicianScreen from "../pages/Technician/TechnicianScreen";
 import TechnicianAppointmentDetail from "../pages/Technician/AppointmentDetail";
 import MaintenanceReport from "../pages/Technician/MaintenanceReport";
 import SelectVehicle from "../pages/Vehicle/SelectVehicle";
+import DataFetcher from "../components/DataFetcher";
 import { PAGE_URLS } from "./config";
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
         <Route path={PAGE_URLS.TECHNICIAN_APPOINTMENT_DETAIL} element={<TechnicianAppointmentDetail />} />
         <Route path={PAGE_URLS.MAINTENANCE_REPORT} element={<MaintenanceReport />} />
         <Route path={PAGE_URLS.SELECT_VEHICLE} element={<SelectVehicle />} />
+        <Route path={PAGE_URLS.DATA_FETCHER} element={<DataFetcher />} />
 
       </Routes>
     </Router>

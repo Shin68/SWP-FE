@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAccountByPhone } from "../../utils/accountData";
+import { authService } from "../../services/authService";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
@@ -8,28 +8,32 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage("");
 
-    const account = getAccountByPhone(phone);
-
-    if (account && account.password === password) {
+    try {
+      const response = await authService.login({ phone, password });
+      
       // Store logged-in user data in localStorage
-      localStorage.setItem('loggedInUser', JSON.stringify(account));
-      setMessage(`Login successful! Welcome ${account.name} (${account.role})`);
+      localStorage.setItem('loggedInUser', JSON.stringify(response));
+      localStorage.setItem('token', response.token);
+      setMessage(`Login successful! Welcome ${response.fullname} (${response.role})`);
+      
       setTimeout(() => {
-        if (account.role === "Technician") {
+        if (response.role === "TECHNICIAN") {
           navigate("/technician");
-        } else if (account.role === "Staff") {
+        } else if (response.role === "STAFF") {
           navigate("/staff/bookings");
-        } else if (account.role === "Customer") {
+        } else if (response.role === "CUSTOMER") {
           navigate("/home");
         } else {
           navigate("/home");
         }
       }, 1500);
-    } else {
+    } catch (error) {
       setMessage("Invalid phone number or password");
+      console.error("Login error:", error);
     }
   };
 

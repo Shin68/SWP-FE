@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8081/api';
 
 // Page URLs
 export const PAGE_URLS = {
@@ -23,6 +23,7 @@ export const PAGE_URLS = {
   TECHNICIAN_APPOINTMENT_DETAIL: '/technician/appointment/:bookingId',
   MAINTENANCE_REPORT: '/technician/maintenance-report/:bookingId',
   SELECT_VEHICLE: '/select-vehicle',
+  DATA_FETCHER: '/data-fetcher',
 };
 
 // Other configs can be added here
