@@ -17,6 +17,7 @@ export const PAGE_URLS = {
   MAINTENANCE_REPORT: '/technician/maintenance-report/:bookingId',
   CONFIRM_BOOKING: '/confirm-booking',
   VEHICLE_DETAIL: '/vehicle-detail',
+  ADMIN_DASHBOARD: '/admin-dashboard',
 };
 
 // Other configs can be added here

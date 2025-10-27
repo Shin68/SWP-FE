@@ -27,8 +27,6 @@ export default function Login() {
         JSON.stringify({ id, fullname, phone: uPhone, email, role })
       );
 
-      setMessage("Login successful!");
-
       setTimeout(() => {
         switch (role) {
           case "ADMIN":
@@ -38,7 +36,7 @@ export default function Login() {
             navigate(PAGE_URLS.STAFF_BOOKING_LIST);
             break;
           case "TECHNICIAN":
-            navigate(PAGE_URLS.STAFF_SELECT_TECHNICIAN);
+            navigate(PAGE_URLS.TECHNICIAN_SCREEN);
             break;
           default:
             navigate(PAGE_URLS.HOME);
@@ -49,7 +47,7 @@ export default function Login() {
       if (err.response?.status === 401) {
         setMessage("Invalid phone number or password");
       } else if (err.response?.status === 404) {
-        setMessage("API /api/auth/login not found (404)");
+        setMessage("Inccorrect phone number or password");
       } else {
         setMessage("Server error. Please try again later.");
       }
@@ -81,7 +79,7 @@ export default function Login() {
             placeholder="Enter password"
             required
           />
-          
+
           <button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-3 rounded"
@@ -92,9 +90,8 @@ export default function Login() {
 
         {message && (
           <p
-            className={`mt-4 text-center ${
-              message.includes("successful") ? "text-green-400" : "text-red-400"
-            }`}
+            className={`mt-4 text-center ${message.includes("successful") ? "text-green-400" : "text-red-400"
+              }`}
           >
             {message}
           </p>

@@ -1,64 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { FaHome } from "react-icons/fa";
 
 export default function VehicleDetail() {
-  const location = useLocation();
+  const { state } = useLocation();
   const navigate = useNavigate();
-  const vehicleName = location.state?.vehicleName;
+  const vehicleId = state?.vehicleId;
 
-  const vehicles = [
-    {
-      name: "Felix2025",
-      plate: "59X4-12969",
-      model: "Felix2025",
-      color: "White",
-      distance: "12300km",
-      battery: "LFP Battery Type",
-      vin: "VF8E1ABC03456789",
-      warranty: {
-        start: "27/05/2025",
-        end: "27/05/2024",
-        policy: "Warranty Policy",
-      },
-      nextCheck: "27/11/2025",
-      image: "/img/bike1.jpg",
-    },
-    {
-      name: "Evo Neo",
-      plate: "30A-123.45",
-      model: "Evo Neo",
-      color: "White",
-      distance: "15000km",
-      battery: "LFP Battery Type",
-      vin: "VF8E1ABC03456789",
-      warranty: {
-        start: "15/10/2024",
-        end: "15/10/2026",
-        policy: "Warranty Policy",
-      },
-      nextCheck: "15/10/2025",
-      image: "/img/bike2.jpg",
-    },
-    {
-      name: "Klara Neo",
-      plate: "51F-999.01",
-      model: "Klara Neo",
-      color: "White",
-      distance: "8000km",
-      battery: "LFP Battery Type",
-      vin: "VF8E1ABC03456789",
-      warranty: {
-        start: "01/12/2024",
-        end: "01/12/2026",
-        policy: "Warranty Policy",
-      },
-      nextCheck: "15/10/2025",
-      image: "/img/bike3.jpg",
-    },
-  ];
+  const [vehicle, setVehicle] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const vehicle = vehicles.find((v) => v.name === vehicleName) || vehicles[0];
+  useEffect(() => {
+    if (!vehicleId) return navigate(-1);
+
+    const fetchVehicle = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:8080/api/customer/vehicle/details/${vehicleId}`
+        );
+        setVehicle(res.data);
+      } catch (err) {
+        console.error("Error fetching vehicle:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicle();
+  }, [vehicleId, navigate]);
+
+  if (loading) return <div className="text-white p-6">Loading...</div>;
+  if (!vehicle) return <div className="text-white p-6">Not found</div>;
 
   return (
     <div className="min-h-screen bg-gray-700 text-white pb-8">
@@ -87,43 +60,20 @@ export default function VehicleDetail() {
       </header>
 
       {/* Vehicle Info */}
-
-      <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-        <img
-          src={vehicle.image}
-          alt={vehicle.name}
-          className="h-40 w-60 object-cover rounded"
-        />
-        <div>
-          <div className="flex gap-0 left-1">
-            <button
-              onClick={() => navigate("/dealer")}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded mt-2"
-            >
-              Book Service
-            </button>
-
-          </div>
+      <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 flex gap-4">
+        <div className="flex-1">
           <h2 className="font-bold text-lg">{vehicle.model}</h2>
-          <p>Model: {vehicle.model}</p>
-          <p>Distance Traveled: {vehicle.distance}</p>
-          <p>Battery Type: {vehicle.battery}</p>
-          <p>VIN (Frame Number): {vehicle.vin}</p>
-          <p>Rated Power: 3500W</p>
-          <p>
-            Warranty Period: {vehicle.warranty.start} - {vehicle.warranty.end}
-          </p>
-          <a href="#" className="text-red-400 underline">
-            Extend Warranty
-          </a>
-          <br />
-          <a href="#" className="text-red-400 underline">
-            Warranty Policy
-          </a>
+          <p>Brand: {vehicle.brand}</p>
+          <p>Plate: {vehicle.license_plate}</p>
+          <p>Odometer: {vehicle.odometer} km</p>
+          <p>Year: {vehicle.year}</p>
         </div>
-        <div className="text-center sm:ml-auto">
-          <p className="text-lg font-semibold">{vehicle.plate}</p>
-        </div>
+        <button
+          onClick={() => navigate("/dealer")}
+          className="bg-red-600 px-4 py-2 rounded h-fit"
+        >
+          Book Service
+        </button>
       </section>
 
       {/* Maintenance Section */}

@@ -178,10 +178,21 @@ export default function Dealer() {
                     ← Back
                   </button>
                   <button
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                    disabled={!scheduleDate || !scheduleTime}
+                    className={`px-4 py-2 rounded text-white 
+    ${!scheduleDate || !scheduleTime
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700"}`}
                     onClick={() => {
-                      navigate(PAGE_URLS.CONFIRM_BOOKING);
-                      // CẦN SỬA LẠI CHO ĐÚNG
+                      if (!scheduleDate || !scheduleTime) return;
+                      navigate(PAGE_URLS.CONFIRM_BOOKING, {
+                        state: {
+                          dealer: selectedDealer,
+                          vehicleId: selectedVehicle.id,
+                          date: scheduleDate,
+                          time: scheduleTime
+                        }
+                      });
                     }}
                   >
                     Next →

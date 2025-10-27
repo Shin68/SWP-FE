@@ -12,6 +12,7 @@ export default function Home() {
   useEffect(() => {
     const fetchUserData = async () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
+
       if (!storedUser) {
         navigate("/");
         return;
@@ -34,7 +35,7 @@ export default function Home() {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    localStorage.removeItem("loggedInUser");
     setMenuOpen(false);
     navigate("/");
   };
@@ -110,7 +111,6 @@ export default function Home() {
             {currentUser.vehicles.map((vehicle) => (
               <div key={vehicle.id} className="flex justify-between items-center bg-gray-500 rounded-md p-3">
                 <div className="flex items-center gap-3">
-                  {/* Logo xe đã xoá */}
                   <div>
                     <div className="font-medium">{vehicle.make} {vehicle.model}</div>
                     <div className="text-xs text-gray-400">
@@ -120,7 +120,9 @@ export default function Home() {
                 </div>
                 <button
                   className="text-sm text-gray-300 hover:text-white"
-                  onClick={() => navigate("/vehicle-detail", { state: { vehicleName: vehicle.model } })}
+                  onClick={() =>
+                    navigate("/vehicle-detail", { state: { vehicleId: vehicle.id } })
+                  }
                 >
                   View →
                 </button>

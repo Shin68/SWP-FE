@@ -13,6 +13,7 @@ import TechnicianAppointmentDetail from "../pages/Technician/AppointmentDetail";
 import MaintenanceReport from "../pages/Technician/MaintenanceReport";
 import ConfirmBooking from "../pages/Booking/ConfirmBooking";
 import VehicleDetail from "../pages/Vehicle/VehicleDetail";
+import AdminDashboard from "../pages/Admin/AdminDashboard";
 import { PAGE_URLS } from "./config";
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
         <Route path={PAGE_URLS.MAINTENANCE_REPORT} element={<MaintenanceReport />} />
         <Route path={PAGE_URLS.VEHICLE_DETAIL} element={<VehicleDetail />} />
         <Route path={PAGE_URLS.CONFIRM_BOOKING} element={<ConfirmBooking />} />
+        <Route path={PAGE_URLS.ADMIN_DASHBOARD} element={<AdminDashboard />} />
 
       </Routes>
     </Router>
