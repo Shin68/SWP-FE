@@ -10,14 +10,12 @@ export const PAGE_URLS = {
   PROFILE_EDIT: '/profile-edit',
   DEALER: '/dealer',
   SELECT_TECHNICIAN: '/staff/select-technician',
-  STAFF_BOOKING_LIST: '/staff/bookings',
-  APPOINTMENT_DETAIL: '/staff/appointment/:bookingId',
-  TECHNICIAN_SCREEN: '/technician',
-  TECHNICIAN_APPOINTMENT_DETAIL: '/technician/appointment/:bookingId',
-  MAINTENANCE_REPORT: '/technician/maintenance-report/:bookingId',
   CONFIRM_BOOKING: '/confirm-booking',
   VEHICLE_DETAIL: '/vehicle-detail',
   ADMIN_DASHBOARD: '/admin-dashboard',
+  STAFF_DASHBOARD: '/staff-dashboard',
+  TECHNICIAN_DASHBOARD: '/technician-dashboard',
+  TECHNICIAN_REPORT: "/technician-report",
 };
 
 // Other configs can be added here

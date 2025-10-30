@@ -19,35 +19,39 @@ export default function Login() {
         password,
       });
 
-      const { token, id, fullname, phone: uPhone, email, role } = res.data;
+      const { token, user } = res.data;
+      // Nếu backend không gói trong "user", fallback sang res.data
+      const userData = user || res.data;
 
       localStorage.setItem("token", token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ id, fullname, phone: uPhone, email, role })
-      );
+      localStorage.setItem("user", JSON.stringify({
+        id: userData.id,
+        fullname: userData.fullname,
+        phone: userData.phone,
+        email: userData.email,
+        role: userData.role
+      }));
 
       setTimeout(() => {
-        switch (role) {
+        switch (userData.role) {
           case "ADMIN":
             navigate(PAGE_URLS.ADMIN_DASHBOARD);
             break;
           case "STAFF":
-            navigate(PAGE_URLS.STAFF_BOOKING_LIST);
+            navigate(PAGE_URLS.STAFF_DASHBOARD);
             break;
           case "TECHNICIAN":
-            navigate(PAGE_URLS.TECHNICIAN_SCREEN);
+            navigate(PAGE_URLS.TECHNICIAN_DASHBOARD);
             break;
           default:
             navigate(PAGE_URLS.HOME);
-            break;
         }
       }, 500);
     } catch (err) {
       if (err.response?.status === 401) {
         setMessage("Invalid phone number or password");
       } else if (err.response?.status === 404) {
-        setMessage("Inccorrect phone number or password");
+        setMessage("Account not found");
       } else {
         setMessage("Server error. Please try again later.");
       }
