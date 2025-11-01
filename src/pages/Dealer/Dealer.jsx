@@ -97,8 +97,11 @@ export default function Dealer() {
               </div>
               <div className="flex items-center text-sm text-gray-200 mt-1">
                 <FaMapMarkerAlt className="text-red-500 mr-2" />
-                <span>{dealer.address || "No address"}</span>
+                <span>{dealer.location || "No address"}</span>
               </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <FaPhoneAlt /> <span>{dealer.contactNumber || "No phone"}</span>
             </div>
             <button
               className="text-red-500 hover:text-red-400 text-xl"
@@ -131,9 +134,9 @@ export default function Dealer() {
                 <div className="text-center text-sm mb-2">
                   Rating: {selectedDealer.rating?.toFixed(1) || 5.0} ({selectedDealer.reviews || 0} reviews)
                 </div>
-                {selectedDealer.phone && (
+                {selectedDealer.contactNumber && (
                   <div className="flex items-center justify-center gap-2 mb-2 text-sm">
-                    <FaPhoneAlt /> {selectedDealer.phone}
+                    <FaPhoneAlt /> {selectedDealer.contactNumber}
                   </div>
                 )}
 

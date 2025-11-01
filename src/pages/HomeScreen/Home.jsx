@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaCog, FaStar, FaMapMarkerAlt, FaPhoneAlt } from "react-icons/fa";
 import axios from "axios";
+import { PAGE_URLS } from "../../App/config";
 
 export default function Home() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dealers, setDealers] = useState([]);
+  const [dealerLoading, setDealerLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -33,6 +36,22 @@ export default function Home() {
 
     fetchUserData();
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchDealers = async () => {
+      try {
+        const res = await axios.get("http://localhost:8080/api/admin/service-centers");
+        setDealers(res.data); // giả sử res.data là mảng dealer
+      } catch (err) {
+        console.error("Failed to fetch dealers:", err);
+        setDealers([]);
+      } finally {
+        setDealerLoading(false);
+      }
+    };
+
+    fetchDealers();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("loggedInUser");
@@ -140,21 +159,11 @@ export default function Home() {
         </button>
       </section>
 
-
-      {/* Promotions Section */}
-      <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-3">Promotions & Vouchers</h3>
-        <p className="text-center text-gray-300 py-6">Sorry! No promotions yet.</p>
-        <div className="flex justify-center">
-          <button className="bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded text-sm">View All Promotions</button>
-        </div>
-      </section>
-
       {/* Bookings Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3">My Bookings</h3>
         <button
-          onClick={() => navigate("/booking-list")}
+          onClick={() => navigate(PAGE_URLS.BOOKING_LIST)}
           className="w-full bg-gray-800 hover:bg-gray-900 text-sm py-2 rounded"
         >
           View My Bookings
@@ -164,28 +173,39 @@ export default function Home() {
       {/* Dealer Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 mb-6">
         <h3 className="text-lg font-semibold mb-3">Nearby Dealers</h3>
-        <div className="bg-white text-gray-900 p-4 rounded-md flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <img src="/img/ev.jpg" alt="EV Dealer" className="h-8 w-8" />
-            <div>
-              <h4 className="font-semibold">Vinfast Thu Duc</h4>
-              <div className="flex text-yellow-500">
-                {[...Array(5)].map((_, i) => (<FaStar key={i} />))}
+
+        {dealerLoading ? (
+          <p className="text-white">Loading dealers...</p>
+        ) : dealers.length === 0 ? (
+          <p className="text-white">No dealers found.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {dealers.map((dealer) => (
+              <div key={dealer.id} className="bg-white text-gray-900 p-4 rounded-md flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <img src={dealer.image || "/img/ev.jpg"} alt={dealer.name} className="h-8 w-8" />
+                  <div>
+                    <h4 className="font-semibold">{dealer.name}</h4>
+                    <div className="flex text-yellow-500">
+                      {[...Array(dealer.rating || 5)].map((_, i) => <FaStar key={i} />)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2 text-sm">
+                  <FaMapMarkerAlt className="mt-1" />
+                  <p>{dealer.location}</p> {/* location = address */}
+                </div>
+
+                <div className="flex items-center gap-2 text-sm">
+                  <FaPhoneAlt /> <span>{dealer.contactNumber}</span>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-          <div className="flex items-start gap-2 text-sm">
-            <FaMapMarkerAlt className="mt-1" />
-            <p>No. 1, Le Van Viet Road, Hiep Phu Ward, Thu Duc City</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <FaPhoneAlt /> <span>0971869363</span>
-          </div>
-          <button className="mt-2 bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded">
-            Call to schedule maintenance
-          </button>
-        </div>
+        )}
       </section>
+
     </div>
   );
 }

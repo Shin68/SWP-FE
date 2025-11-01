@@ -1,33 +1,89 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { FaHome } from "react-icons/fa";
 import { PAGE_URLS } from "../../App/config";
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
-
-  // Temporary user data
   const [user, setUser] = useState({
-    name: "Tran Quang Hieu",
-    phone: "0123456789",
-    email: "hieu@example.com",
+    id: "",
+    fullname: "",
+    email: "",
     password: "",
-    dob: "2001-05-20",
-    address: "Thu Duc City, Ho Chi Minh",
+    dob: "",
+    address: "",
+    phone: "",
   });
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem("token");
+
+  // Fetch current profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (!storedUser) {
+          navigate(PAGE_URLS.LOGIN);
+          return;
+        }
+
+        const res = await axios.get(
+          `http://localhost:8080/api/auth/profile/${storedUser.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setUser({
+          id: res.data.id || storedUser.id,
+          fullname: res.data.fullname || "",
+          email: res.data.email || "",
+          password: "",
+          dob: res.data.dob || "",
+          address: res.data.address || "",
+          phone: res.data.phone || "",
+        });
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        alert("Cannot fetch profile data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUser({ ...user, [name]: value });
+    setUser((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Gửi dữ liệu update lên API
-    console.log("Updated user:", user);
-    // Sau khi submit xong, quay về Home
-    navigate(PAGE_URLS.HOME);
+    try {
+      if (!user.id) return alert("User ID missing");
+
+      await axios.patch(
+        `http://localhost:8080/api/customer/update-profile/${user.id}`,
+        {
+          fullname: user.fullname,
+          email: user.email,
+          password: user.password || undefined, // only send if entered
+          dob: user.dob,
+          address: user.address,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Profile updated successfully!");
+      navigate(PAGE_URLS.HOME);
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert("Failed to update profile. Check console for details.");
+    }
   };
+
+  if (loading) return <div className="p-6 text-white">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-700 text-white">
@@ -49,8 +105,8 @@ export default function ProfileEdit() {
             <label className="block mb-1">Full Name</label>
             <input
               type="text"
-              name="name"
-              value={user.name}
+              name="fullname"
+              value={user.fullname}
               onChange={handleChange}
               className="w-full bg-gray-700 text-white px-3 py-2 rounded"
               required
@@ -70,13 +126,14 @@ export default function ProfileEdit() {
           </div>
 
           <div>
-            <label className="block mb-1">Password</label>
+            <label className="block mb-1">New Password</label>
             <input
               type="password"
               name="password"
               value={user.password}
               onChange={handleChange}
               className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+              placeholder="Enter new password if you want to change"
             />
           </div>
 

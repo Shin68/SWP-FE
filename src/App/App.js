@@ -12,6 +12,7 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import StaffDashboard from "../pages/Staff/StaffDashboard";
 import TechnicianDashboard from "../pages/Technician/TechnicianDashboard";
 import TechnicianReport from "../pages/Technician/TechnicianReport";
+import BookingList from "../pages/Booking/BookingList";
 import { PAGE_URLS } from "./config";
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         <Route path={PAGE_URLS.STAFF_DASHBOARD} element={<StaffDashboard />} />
         <Route path={PAGE_URLS.TECHNICIAN_DASHBOARD} element={<TechnicianDashboard />} />
         <Route path={PAGE_URLS.TECHNICIAN_REPORT + "/:appointmentId"} element={<TechnicianReport />} />
+        <Route path={PAGE_URLS.BOOKING_LIST} element={<BookingList />} />
 
       </Routes>
     </Router>
