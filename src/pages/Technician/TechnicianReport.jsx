@@ -32,10 +32,10 @@ export default function TechnicianReport() {
             const appt = res.data.find(a => a.appointmentId === parseInt(appointmentId));
             setAppointment(appt);
             
-            // Check if rejected and has feedback
-            if (appt && appt.status === 'REJECTED' && appt.customerFeedback) {
+            // Check if rejected (has customer feedback)
+            if (appt && appt.customerFeedback) {
                 setCustomerFeedback(appt.customerFeedback);
-                setReportStatus('REJECTED');
+                setReportStatus('REJECTED'); // UI status for display
             }
         } catch (err) {
             console.error("❌ Failed to fetch appointment:", err);
@@ -326,7 +326,7 @@ export default function TechnicianReport() {
                 </div>
 
                 {/* Customer Feedback Alert - Shows when rejected */}
-                {customerFeedback && reportStatus === 'REJECTED' && (
+                {customerFeedback && (
                     <div className="bg-red-50 border-2 border-red-400 rounded-lg p-6 mb-6">
                         <div className="flex items-start gap-3">
                             <span className="text-3xl">⚠️</span>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaList, FaSignOutAlt, FaUserCog, FaSpinner, FaPlay, FaClipboardList } from "react-icons/fa";
+import { FaList, FaSignOutAlt, FaUserCog, FaSpinner, FaPlay, FaClipboardList, FaBell, FaCheckCircle } from "react-icons/fa";
 import axios from "axios";
 import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
@@ -13,6 +13,7 @@ export default function TechnicianDashboard() {
     const [activeTab, setActiveTab] = useState("list");
     const [refreshKey, setRefreshKey] = useState(0);
     const [startingId, setStartingId] = useState(null);
+    const [finishingId, setFinishingId] = useState(null);
 
     const storedUser = localStorage.getItem("user");
     const techUser = storedUser ? JSON.parse(storedUser) : null;
@@ -49,9 +50,13 @@ export default function TechnicianDashboard() {
                         status,
                         appointmentDate,
                         appointmentTime,
+                        customerFeedback, // Include customer feedback
                     } = item;
 
                     if (!technicianAssigned || technicianAssigned.toLowerCase() === "none") continue;
+                    
+                    // Skip completed and paid appointments
+                    if (status === "COMPLETED" || status === "PAID") continue;
 
                     let vehicleName = "---";
                     let branchName = "---";
@@ -66,10 +71,26 @@ export default function TechnicianDashboard() {
                         branchName = cRes.data?.name || "---";
                     } catch { }
 
-                    enriched.push({ appointmentId, vehicleName, branchName, technicianAssigned, status, appointmentDate, appointmentTime });
+                    enriched.push({ 
+                        appointmentId, 
+                        vehicleName, 
+                        branchName, 
+                        technicianAssigned, 
+                        status, 
+                        appointmentDate, 
+                        appointmentTime,
+                        customerFeedback // Include in enriched data
+                    });
                 }
 
                 setAppointments(enriched);
+                
+                // Debug: Check for rejected reports
+                const rejectedCount = enriched.filter(a => a.customerFeedback).length;
+                console.log(`📊 Total appointments: ${enriched.length}, Rejected: ${rejectedCount}`);
+                if (rejectedCount > 0) {
+                    console.log("🚨 Rejected appointments:", enriched.filter(a => a.customerFeedback));
+                }
             } catch (err) {
                 if (axios.isCancel(err)) {
                     console.log("🔄 Request canceled:", err.message);
@@ -108,19 +129,43 @@ export default function TechnicianDashboard() {
     const handleStartMaintenance = async (appointmentId) => {
         setStartingId(appointmentId);
         try {
-            // Chỉ cập nhật status thôi
-            await axios.put(
-                `${API_BASE_URL}/staff/appointments/${appointmentId}/status`,
-                { status: "IN_PROGRESS" },
+            await axios.post(
+                `${API_BASE_URL}/technician/start-maintenance/${appointmentId}`,
+                {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
+            alert("Maintenance work started successfully!");
             setRefreshKey(k => k + 1);
         } catch (err) {
             console.error("Error starting maintenance:", err);
-            alert("Failed to start maintenance!");
+            alert(err.response?.data?.message || "Failed to start maintenance!");
         } finally {
             setStartingId(null);
+        }
+    };
+
+    // Finish maintenance
+    const handleFinishMaintenance = async (appointmentId) => {
+        if (!window.confirm("Are you sure you want to finish this maintenance work?")) {
+            return;
+        }
+
+        setFinishingId(appointmentId);
+        try {
+            await axios.post(
+                `${API_BASE_URL}/technician/finish/${appointmentId}`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            alert("Maintenance work completed! Staff and customer have been notified.");
+            setRefreshKey(k => k + 1);
+        } catch (err) {
+            console.error("Error finishing maintenance:", err);
+            alert(err.response?.data?.message || "Failed to finish maintenance!");
+        } finally {
+            setFinishingId(null);
         }
     };
 
@@ -144,6 +189,17 @@ export default function TechnicianDashboard() {
                     <button onClick={() => setActiveTab("list")} className={`w-full text-left px-3 py-3 rounded flex items-center gap-3 ${activeTab === "list" ? "bg-gray-800 text-white" : "hover:bg-gray-800 text-gray-300"}`}>
                         <FaList /> Maintenance List
                     </button>
+                    <button 
+                        onClick={() => setActiveTab("notifications")} 
+                        className={`w-full text-left px-3 py-3 rounded flex items-center gap-3 mt-2 relative ${activeTab === "notifications" ? "bg-gray-800 text-white" : "hover:bg-gray-800 text-gray-300"}`}
+                    >
+                        <FaBell /> Notifications
+                        {appointments.filter(a => a.customerFeedback).length > 0 && (
+                            <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                {appointments.filter(a => a.customerFeedback).length}
+                            </span>
+                        )}
+                    </button>
                     <button onClick={() => setActiveTab("settings")} className={`w-full text-left px-3 py-3 rounded flex items-center gap-3 mt-2 ${activeTab === "settings" ? "bg-gray-800 text-white" : "hover:bg-gray-800 text-gray-300"}`}>
                         <FaUserCog /> Settings
                     </button>
@@ -164,55 +220,19 @@ export default function TechnicianDashboard() {
                     <>
                         <header className="flex items-center justify-between mb-6">
                             <h1 className="text-2xl font-semibold text-gray-800">Maintenance Appointments</h1>
-                            <div className="text-sm text-gray-600">Total: {appointments.length}</div>
-                        </header>
-
-                        {/* Rejected Reports - Needs Revision */}
-                        {appointments.filter(a => a.status === "REJECTED").length > 0 && (
-                            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 mb-6">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-2xl">⚠️</span>
-                                    <h2 className="text-lg font-semibold text-red-800">
-                                        Reports Rejected by Customer - Revision Required
-                                    </h2>
+                            <div className="flex items-center gap-4">
+                                {/* Notification Bell */}
+                                <div className="relative">
+                                    <span className="text-3xl cursor-pointer" title="Rejected Reports">🔔</span>
+                                    {appointments.filter(a => a.customerFeedback).length > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                                            {appointments.filter(a => a.customerFeedback).length}
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="space-y-3">
-                                    {appointments.filter(a => a.status === "REJECTED").map(a => (
-                                        <div key={a.appointmentId} className="bg-white rounded-lg p-4 border border-red-200">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="font-semibold text-gray-800">
-                                                        Appointment #{a.appointmentId}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600 mt-1">
-                                                        🚗 {a.vehicleName}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        📅 {a.appointmentDate} at {a.appointmentTime}
-                                                    </div>
-                                                    {a.customerFeedback && (
-                                                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                                            <div className="text-xs font-semibold text-yellow-800 mb-1">
-                                                                Customer Feedback:
-                                                            </div>
-                                                            <div className="text-sm text-gray-700">
-                                                                "{a.customerFeedback}"
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => navigate(`${PAGE_URLS.TECHNICIAN_REPORT}/${a.appointmentId}`)}
-                                                className="mt-3 w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded"
-                                            >
-                                                🔧 Revise Report
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="text-sm text-gray-600">Total: {appointments.length}</div>
                             </div>
-                        )}
+                        </header>
 
                         <div className="bg-white shadow rounded overflow-x-auto">
                             <table className="min-w-full text-sm">
@@ -243,12 +263,41 @@ export default function TechnicianDashboard() {
                                             </td>
                                             <td className="px-4 py-3">{a.technicianAssigned}</td>
                                             <td className="px-4 py-3">
-                                                <span className={`px-2 py-1 rounded text-xs ${a.status === "IN_PROGRESS" ? "bg-yellow-100 text-yellow-800" : a.status === "ASSIGNED" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{a.status}</span>
+                                                <span className={`px-2 py-1 rounded text-xs ${
+                                                    a.status === "IN_PROGRESS" ? "bg-yellow-100 text-yellow-800" : 
+                                                    a.status === "APPROVED" ? "bg-green-100 text-green-800" :
+                                                    a.status === "ASSIGNED" ? "bg-blue-100 text-blue-800" : 
+                                                    a.status === "PAYMENT_PENDING" ? "bg-purple-100 text-purple-800" :
+                                                    "bg-gray-100 text-gray-800"
+                                                }`}>{a.status}</span>
                                             </td>
                                             <td className="px-4 py-3 flex gap-2">
-                                                <button onClick={() => handleStartMaintenance(a.appointmentId)} disabled={startingId === a.appointmentId || a.status === "IN_PROGRESS"} className={`px-2 py-1 text-xs rounded ${startingId === a.appointmentId || a.status === "IN_PROGRESS" ? "bg-gray-300 text-gray-700 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
-                                                    <FaPlay /> Start
-                                                </button>
+                                                {a.status === "APPROVED" && (
+                                                    <button 
+                                                        onClick={() => handleStartMaintenance(a.appointmentId)} 
+                                                        disabled={startingId === a.appointmentId} 
+                                                        className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
+                                                            startingId === a.appointmentId 
+                                                                ? "bg-gray-300 text-gray-700 cursor-not-allowed" 
+                                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                        }`}
+                                                    >
+                                                        <FaPlay /> Start
+                                                    </button>
+                                                )}
+                                                {a.status === "IN_PROGRESS" && (
+                                                    <button 
+                                                        onClick={() => handleFinishMaintenance(a.appointmentId)} 
+                                                        disabled={finishingId === a.appointmentId} 
+                                                        className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
+                                                            finishingId === a.appointmentId 
+                                                                ? "bg-gray-300 text-gray-700 cursor-not-allowed" 
+                                                                : "bg-green-600 text-white hover:bg-green-700"
+                                                        }`}
+                                                    >
+                                                        <FaCheckCircle /> Finish
+                                                    </button>
+                                                )}
                                                 <button onClick={() => handleReport(a)} className="px-2 py-1 text-xs rounded flex items-center gap-1 bg-orange-600 text-white hover:bg-orange-700">
                                                     <FaClipboardList /> Report
                                                 </button>
@@ -258,6 +307,79 @@ export default function TechnicianDashboard() {
                                 </tbody>
                             </table>
                         </div>
+                    </>
+                ) : activeTab === "notifications" ? (
+                    <>
+                        <header className="flex items-center justify-between mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-800">🔔 Customer Notifications</h1>
+                            <div className="text-sm text-gray-600">
+                                {appointments.filter(a => a.customerFeedback).length} pending feedback(s)
+                            </div>
+                        </header>
+
+                        {loading ? (
+                            <div className="bg-white shadow rounded p-12 text-center">
+                                <FaSpinner className="animate-spin inline-block text-3xl text-gray-400" />
+                                <p className="mt-4 text-gray-600">Loading notifications...</p>
+                            </div>
+                        ) : appointments.filter(a => a.customerFeedback).length === 0 ? (
+                            <div className="bg-white shadow rounded p-12 text-center">
+                                <div className="text-6xl mb-4">✅</div>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">All Clear!</h3>
+                                <p className="text-gray-600">No customer feedback pending at the moment.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {appointments.filter(a => a.customerFeedback).map(a => (
+                                    <div key={a.appointmentId} className="bg-white shadow rounded-lg overflow-hidden border-l-4 border-red-500">
+                                        <div className="p-6">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">
+                                                            ❌ Customer Rejected
+                                                        </span>
+                                                        <span className="text-gray-500 text-sm">
+                                                            {a.appointmentDate} at {a.appointmentTime}
+                                                        </span>
+                                                    </div>
+                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                        Appointment #{a.appointmentId}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        🚗 {a.vehicleName} | 🏢 {a.branchName}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Customer Feedback */}
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-2xl">💬</span>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-semibold text-yellow-800 mb-2">
+                                                            Customer's Feedback:
+                                                        </p>
+                                                        <p className="text-gray-800 italic">
+                                                            "{a.customerFeedback}"
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Button */}
+                                            <button
+                                                onClick={() => navigate(`${PAGE_URLS.TECHNICIAN_REPORT}/${a.appointmentId}`)}
+                                                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                                            >
+                                                <FaClipboardList />
+                                                Open Report & Revise
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </>
                 ) : (
                     <div className="bg-white shadow rounded p-6">

@@ -24,7 +24,7 @@ export default function SelectTechnician() {
       try {
         console.log("📡 Fetching technicians...");
         const res = await axios.get(
-          "`${API_BASE_URL}/admin/users/role/TECHNICIAN",
+          `${API_BASE_URL}/admin/users/role/TECHNICIAN`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setTechnicians(res.data || []);

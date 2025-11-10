@@ -80,7 +80,14 @@ export default function ReportViewer() {
             navigate("/home");
         } catch (err) {
             console.error("Failed to approve:", err);
-            alert("Failed to approve: " + (err.response?.data || err.message));
+            console.error("Error details:", err.response);
+            const errorMsg = typeof err.response?.data === 'string' 
+                ? err.response.data 
+                : err.response?.data?.message 
+                || JSON.stringify(err.response?.data)
+                || err.message 
+                || "Unknown error";
+            alert("Failed to approve: " + errorMsg);
         } finally {
             setSubmitting(false);
         }
@@ -111,7 +118,14 @@ export default function ReportViewer() {
             navigate("/home");
         } catch (err) {
             console.error("Failed to reject:", err);
-            alert("Failed to reject: " + (err.response?.data || err.message));
+            console.error("Error details:", err.response);
+            const errorMsg = typeof err.response?.data === 'string' 
+                ? err.response.data 
+                : err.response?.data?.message 
+                || JSON.stringify(err.response?.data)
+                || err.message 
+                || "Unknown error";
+            alert("Failed to reject: " + errorMsg);
         } finally {
             setSubmitting(false);
         }

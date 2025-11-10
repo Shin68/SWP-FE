@@ -17,6 +17,9 @@ export default function Home() {
   const [quotationsLoading, setQuotationsLoading] = useState(true);
   const [pendingReports, setPendingReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
+  const [pendingPayments, setPendingPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -165,13 +168,10 @@ export default function Home() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        // Filter appointments with status COMPLETED (report sent, waiting for review)
-        const pending = (appointmentsRes.data || []).filter(
-          appt => appt.status === 'COMPLETED'
-        );
-        
-        setPendingReports(pending);
-        console.log("Pending reports:", pending);
+        // Don't show any pending reports - they should go through payment flow
+        // Only PAYMENT_PENDING appointments need action
+        setPendingReports([]);
+        console.log("Pending reports: disabled (using payment flow only)");
       } catch (err) {
         console.error("Failed to fetch pending reports:", err);
         setPendingReports([]);
@@ -181,6 +181,41 @@ export default function Home() {
     };
 
     fetchPendingReports();
+  }, []);
+
+  useEffect(() => {
+    const fetchPendingPayments = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setPaymentsLoading(false);
+        return;
+      }
+
+      try {
+        console.log(`Fetching pending payments for user ${storedUser.id}`);
+        const appointmentsRes = await axios.get(
+          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Filter appointments with status PAYMENT_PENDING only
+        const pending = (appointmentsRes.data || []).filter(
+          appt => appt.status === 'PAYMENT_PENDING'
+        );
+        
+        setPendingPayments(pending);
+        console.log("Pending payments:", pending);
+      } catch (err) {
+        console.error("Failed to fetch pending payments:", err);
+        setPendingPayments([]);
+      } finally {
+        setPaymentsLoading(false);
+      }
+    };
+
+    fetchPendingPayments();
   }, []);
 
   const handleLogout = () => {
@@ -211,12 +246,14 @@ export default function Home() {
           
           {/* Notification Bell */}
           <div className="relative">
-            <span className="text-2xl cursor-pointer">🔔</span>
-            {pendingReports.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {pendingReports.length}
-              </span>
-            )}
+            <button onClick={() => setShowNotificationModal(!showNotificationModal)}>
+              <span className="text-2xl cursor-pointer">🔔</span>
+              {(pendingReports.length + pendingPayments.length) > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                  {pendingReports.length + pendingPayments.length}
+                </span>
+              )}
+            </button>
           </div>
 
           <div className="relative">
@@ -290,12 +327,12 @@ export default function Home() {
         ) : (
           <div className="text-center text-gray-400 py-4">No vehicles registered</div>
         )}
-        <button
+        {/* <button
           onClick={() => navigate("/vehicle-list")}
           className="mt-3 w-full bg-gray-800 hover:bg-gray-900 text-sm py-2 rounded"
         >
           + Add My Vehicle
-        </button>
+        </button> */}
       </section>
 
       {/* Bookings Section */}
@@ -341,6 +378,56 @@ export default function Home() {
           View All Bookings
         </button>
       </section>
+
+      {/* Pending Payments - Action Required */}
+      {pendingPayments.length > 0 && (
+        <section className="bg-red-700 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">💰</span>
+            <h3 className="text-lg font-semibold">Payment Required - Action Required!</h3>
+          </div>
+          {paymentsLoading ? (
+            <div className="text-center text-white py-4">Loading payments...</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingPayments.map((payment) => (
+                <div key={payment.id} className="bg-white text-gray-900 rounded-md p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold text-lg">
+                        Appointment #{payment.id}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        📅 {payment.appointmentDate} at {payment.appointmentTime}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        👨‍🔧 Technician: {payment.technicianAssigned}
+                      </div>
+                      <div className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded inline-block mt-2">
+                        ✅ Maintenance Completed
+                      </div>
+                    </div>
+                    <div className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">
+                      💳 Payment Pending
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+                    <p className="text-sm text-gray-800">
+                      Your vehicle maintenance is complete! Please proceed with payment to pick up your vehicle.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/payment/${payment.id}`)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded transition"
+                  >
+                    💳 Pay Now
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Pending Reports - Action Required */}
       {pendingReports.length > 0 && (
@@ -464,6 +551,109 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Notification Modal */}
+      {showNotificationModal && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setShowNotificationModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="fixed top-20 right-4 w-96 max-h-[80vh] overflow-y-auto bg-gray-800 rounded-lg shadow-2xl z-50 border-2 border-gray-600">
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-600 p-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                🔔 Notifications
+                {(pendingReports.length + pendingPayments.length) > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
+                    {pendingReports.length + pendingPayments.length}
+                  </span>
+                )}
+              </h3>
+              <button 
+                onClick={() => setShowNotificationModal(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              {/* Pending Payments Notifications */}
+              {pendingPayments.map((payment) => (
+                <div 
+                  key={`payment-${payment.id}`}
+                  className="bg-red-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-red-600 transition"
+                  onClick={() => {
+                    setShowNotificationModal(false);
+                    navigate(`/payment/${payment.id}`);
+                  }}
+                >
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="text-2xl">💰</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Payment Required</div>
+                      <div className="text-xs text-gray-200 mt-1">
+                        Appointment #{payment.id}
+                      </div>
+                      <div className="text-xs text-gray-300 mt-1">
+                        📅 {payment.appointmentDate} at {payment.appointmentTime}
+                      </div>
+                      <div className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded inline-block mt-2">
+                        ✅ Maintenance Completed
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-yellow-200 mt-2">
+                    Click to proceed with payment →
+                  </div>
+                </div>
+              ))}
+
+              {/* Pending Reports Notifications */}
+              {pendingReports.map((report) => (
+                <div 
+                  key={`report-${report.id}`}
+                  className="bg-orange-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-orange-600 transition"
+                  onClick={() => {
+                    setShowNotificationModal(false);
+                    navigate(`/report-viewer/${report.id}`);
+                  }}
+                >
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="text-2xl">📄</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-white">Report Ready for Review</div>
+                      <div className="text-xs text-gray-200 mt-1">
+                        Appointment #{report.id}
+                      </div>
+                      <div className="text-xs text-gray-300 mt-1">
+                        📅 {report.appointmentDate} at {report.appointmentTime}
+                      </div>
+                      <div className="text-xs text-gray-300">
+                        👨‍🔧 {report.technicianAssigned}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-yellow-200 mt-2">
+                    Click to view & approve report →
+                  </div>
+                </div>
+              ))}
+
+              {/* No Notifications */}
+              {pendingPayments.length === 0 && pendingReports.length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-2">✅</div>
+                  <div className="text-sm">No pending notifications</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );

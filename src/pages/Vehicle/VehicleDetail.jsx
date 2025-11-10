@@ -10,29 +10,83 @@ export default function VehicleDetail() {
   const vehicleId = state?.vehicleId;
 
   const [vehicle, setVehicle] = useState(null);
+  const [maintenanceInfo, setMaintenanceInfo] = useState(null);
+  const [serviceHistory, setServiceHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     if (!vehicleId) return navigate(-1);
 
-    const fetchVehicle = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE_URL}/customer/vehicle/details/${vehicleId}`
+        // Fetch vehicle details
+        const vehicleRes = await axios.get(
+          `${API_BASE_URL}/customer/vehicle/details/${vehicleId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        setVehicle(res.data);
+        setVehicle(vehicleRes.data);
+
+        // Fetch maintenance/reminder info
+        const maintenanceRes = await axios.get(
+          `${API_BASE_URL}/customer/vehicle/${vehicleId}/maintenance`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setMaintenanceInfo(maintenanceRes.data);
+
+        // Fetch service history
+        const historyRes = await axios.get(
+          `${API_BASE_URL}/customer/vehicle/${vehicleId}/service-history`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (historyRes.data.success) {
+          setServiceHistory(historyRes.data.serviceHistory || []);
+        }
+
       } catch (err) {
-        console.error("Error fetching vehicle:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVehicle();
-  }, [vehicleId, navigate]);
+    fetchData();
+  }, [vehicleId, navigate, token]);
 
-  if (loading) return <div className="text-white p-6">Loading...</div>;
-  if (!vehicle) return <div className="text-white p-6">Not found</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-700 text-white flex items-center justify-center">
+      <div className="text-xl">Loading vehicle details...</div>
+    </div>
+  );
+
+  if (!vehicle) return (
+    <div className="min-h-screen bg-gray-700 text-white flex items-center justify-center">
+      <div className="text-xl">Vehicle not found</div>
+    </div>
+  );
+
+  // Get reminder status colors
+  const getReminderStatus = (reminders, index) => {
+    if (!reminders || !reminders[index]) return "bg-gray-300";
+    const status = reminders[index].status;
+    if (status === "DONE") return "bg-green-500";
+    if (status === "MISSED") return "bg-red-500";
+    if (status === "PENDING") return "bg-yellow-400";
+    return "bg-gray-300";
+  };
+
+  const getNextReminder = (reminders) => {
+    if (!reminders || reminders.length === 0) return null;
+    
+    const pending = reminders.find(r => r.status === "PENDING");
+    if (pending) return pending;
+    
+    const missed = reminders.find(r => r.status === "MISSED");
+    return missed || reminders[0];
+  };
+
+  const nextReminder = maintenanceInfo ? getNextReminder(maintenanceInfo.maintenanceReminders) : null;
 
   return (
     <div className="min-h-screen bg-gray-700 text-white pb-8">
@@ -40,13 +94,14 @@ export default function VehicleDetail() {
       <header className="bg-gray-800 p-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <img src="/img/logo.jpg" alt="Logo" className="h-10 w-10" />
-          <span className="font-bold text-lg">EV</span>
+          <span className="font-bold text-lg">EV Service Center</span>
         </div>
 
         <div className="flex gap-4 items-center">
           <button
             onClick={() => navigate("/home")}
             className="text-white hover:text-gray-300"
+            title="Home"
           >
             <FaHome size={20} />
           </button>
@@ -63,66 +118,146 @@ export default function VehicleDetail() {
       {/* Vehicle Info */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 flex gap-4">
         <div className="flex-1">
-          <h2 className="font-bold text-lg">{vehicle.model}</h2>
-          <p>Brand: {vehicle.brand}</p>
-          <p>Plate: {vehicle.license_plate}</p>
-          <p>Odometer: {vehicle.odometer} km</p>
-          <p>Year: {vehicle.year}</p>
+          <h2 className="font-bold text-xl mb-2">{vehicle.brand} {vehicle.model}</h2>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <p><span className="text-gray-300">License Plate:</span> <span className="font-semibold">{vehicle.license_plate || 'N/A'}</span></p>
+            <p><span className="text-gray-300">VIN:</span> <span className="font-semibold">{vehicle.vin || 'N/A'}</span></p>
+            <p><span className="text-gray-300">Odometer:</span> <span className="font-semibold">{vehicle.odometer ? vehicle.odometer.toLocaleString() : 'N/A'} km</span></p>
+            <p><span className="text-gray-300">Purchase Date:</span> <span className="font-semibold">{vehicle.purchaseDate || 'N/A'}</span></p>
+          </div>
         </div>
         <button
           onClick={() => navigate("/dealer")}
-          className="bg-red-600 px-4 py-2 rounded h-fit"
+          className="bg-red-600 hover:bg-red-700 px-6 py-3 rounded h-fit font-semibold transition"
         >
-          Book Service
+          📅 Book Service
         </button>
       </section>
 
-      {/* Maintenance Section */}
+      {/* Periodic Inspection Information */}
       <section className="bg-gray-100 text-gray-900 mx-4 mt-4 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3">
-          Periodic Inspection Information
+          🔧 Periodic Inspection Information
         </h3>
 
         {/* Maintenance cycles */}
-        <div className="flex justify-center gap-2 mb-4">
-          <div className="bg-red-500 text-white px-3 py-1 rounded">Time 1</div>
-          <div className="bg-yellow-500 text-white px-3 py-1 rounded">
-            Time 2
-          </div>
-          <div className="bg-gray-300 px-3 py-1 rounded">Time 3</div>
-          <div className="bg-gray-300 px-3 py-1 rounded">Time 4</div>
-          <div className="bg-gray-300 px-3 py-1 rounded">Time 5</div>
-          <div className="bg-gray-300 px-3 py-1 rounded">Time 6</div>
+        <div className="flex justify-center gap-2 mb-4 flex-wrap">
+          {maintenanceInfo && maintenanceInfo.maintenanceReminders ? (
+            maintenanceInfo.maintenanceReminders.map((reminder, index) => (
+              <div
+                key={index}
+                className={`${getReminderStatus(maintenanceInfo.maintenanceReminders, index)} text-white px-3 py-1 rounded text-sm font-semibold`}
+                title={`${reminder.status} - ${reminder.reminderDate}`}
+              >
+                Time {index + 1}
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 1</div>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 2</div>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 3</div>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 4</div>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 5</div>
+              <div className="bg-gray-300 px-3 py-1 rounded text-sm">Time 6</div>
+            </>
+          )}
         </div>
 
         {/* Legend */}
-        <div className="flex justify-center items-center gap-4 text-sm mb-2">
+        <div className="flex justify-center items-center gap-4 text-sm mb-3">
           <div className="flex items-center gap-1">
-            <span className="w-4 h-4 bg-green-500 rounded"></span> On Time
+            <span className="w-4 h-4 bg-green-500 rounded"></span> Done
           </div>
           <div className="flex items-center gap-1">
             <span className="w-4 h-4 bg-red-500 rounded"></span> Overdue
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-4 h-4 bg-yellow-400 rounded"></span> Next Time
+            <span className="w-4 h-4 bg-yellow-400 rounded"></span> Pending
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-4 h-4 bg-gray-300 rounded"></span> Not Set
           </div>
         </div>
 
         {/* Next check */}
-        <div className="text-center mt-3 text-sm">
-          <p>
-            Next Inspection Expiry Date (Time 2):{" "}
-            <span className="font-semibold">{vehicle.nextCheck}</span>
-          </p>
-        </div>
+        {nextReminder && (
+          <div className={`text-center mt-3 p-3 rounded ${
+            nextReminder.status === "MISSED" ? "bg-red-100 border border-red-400" : 
+            nextReminder.status === "PENDING" ? "bg-yellow-100 border border-yellow-400" : 
+            "bg-gray-200"
+          }`}>
+            <p className="text-sm">
+              {nextReminder.status === "MISSED" ? "⚠️ Overdue Inspection:" : "📅 Next Inspection:"}{" "}
+              <span className="font-semibold">{nextReminder.reminderDate}</span>
+              {nextReminder.status === "MISSED" && (
+                <span className="ml-2 text-red-600 text-xs">(Please schedule service soon!)</span>
+              )}
+            </p>
+          </div>
+        )}
       </section>
 
-      {/* Repair History */}
+      {/* Service History */}
       <section className="bg-gray-100 text-gray-900 mx-4 mt-4 rounded-lg p-4">
-        <h3 className="text-lg font-semibold mb-3">Repair History</h3>
-        <p className="text-center text-gray-600 text-sm">
-          No repair information available at EV dealers in Vietnam
-        </p>
+        <h3 className="text-lg font-semibold mb-3">🛠️ Service History</h3>
+        
+        {serviceHistory.length === 0 ? (
+          <p className="text-center text-gray-600 text-sm py-4">
+            No service history available yet
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {serviceHistory.map((service, index) => (
+              <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-semibold text-base">
+                      {service.date} {service.time && `at ${service.time}`}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {service.serviceCenter || 'Service Center'}
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded text-xs font-semibold ${
+                    service.status === 'COMPLETED' || service.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                    service.status === 'PAYMENT_PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {service.status}
+                  </div>
+                </div>
+
+                {service.odometer && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    📊 Odometer: <span className="font-semibold">{service.odometer.toLocaleString()} km</span>
+                  </div>
+                )}
+
+                <div className="text-sm mb-2">
+                  <span className="font-semibold">Services:</span>{" "}
+                  {service.services && service.services.length > 0 ? (
+                    service.services.join(", ")
+                  ) : (
+                    "N/A"
+                  )}
+                </div>
+
+                {service.technician && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    👨‍🔧 Technician: {service.technician}
+                  </div>
+                )}
+
+                {service.totalCost && (
+                  <div className="text-sm font-semibold text-green-600 mt-2">
+                    💰 Total: {service.totalCost.toLocaleString()} VND
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

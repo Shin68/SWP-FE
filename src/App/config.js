@@ -19,6 +19,9 @@ export const PAGE_URLS = {
   BOOKING_LIST: "/booking-list",
   QUOTATION_APPROVAL: "/quotation",
   REPORT_VIEWER: "/report-viewer",
+  PAYMENT: "/payment",
+  PAYMENT_SUCCESS: "/payment-success",
+  PAYMENT_RETURN: "/payment-return",
 };
 
 // Other configs can be added here
