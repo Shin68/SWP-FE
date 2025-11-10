@@ -13,6 +13,8 @@ import StaffDashboard from "../pages/Staff/StaffDashboard";
 import TechnicianDashboard from "../pages/Technician/TechnicianDashboard";
 import TechnicianReport from "../pages/Technician/TechnicianReport";
 import BookingList from "../pages/Booking/BookingList";
+import QuotationApproval from "../pages/Customer/QuotationApproval";
+import ReportViewer from "../pages/Customer/ReportViewer";
 import { PAGE_URLS } from "./config";
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
         <Route path={PAGE_URLS.TECHNICIAN_DASHBOARD} element={<TechnicianDashboard />} />
         <Route path={PAGE_URLS.TECHNICIAN_REPORT + "/:appointmentId"} element={<TechnicianReport />} />
         <Route path={PAGE_URLS.BOOKING_LIST} element={<BookingList />} />
+        <Route path={PAGE_URLS.QUOTATION_APPROVAL + "/:appointmentId"} element={<QuotationApproval />} />
+        <Route path={PAGE_URLS.REPORT_VIEWER + "/:appointmentId"} element={<ReportViewer />} />
 
       </Routes>
     </Router>

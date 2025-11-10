@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaList, FaSignOutAlt, FaUserCog, FaSpinner, FaPlay, FaClipboardList } from "react-icons/fa";
 import axios from "axios";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
 export default function TechnicianDashboard() {
     const navigate = useNavigate();
@@ -32,7 +32,7 @@ export default function TechnicianDashboard() {
         const fetchAppointments = async () => {
             setLoading(true);
             try {
-                const res = await axios.get("http://localhost:8081/api/staff/appointments", {
+                const res = await axios.get(`${API_BASE_URL}/staff/appointments`, {
                     headers: { Authorization: `Bearer ${token}` },
                     cancelToken: source.token,
                 });
@@ -56,13 +56,13 @@ export default function TechnicianDashboard() {
                     let vehicleName = "---";
                     let branchName = "---";
                     try {
-                        const vRes = await axios.get(`http://localhost:8081/api/customer/vehicle/details/${vehicleId}`, { headers: { Authorization: `Bearer ${token}` } });
+                        const vRes = await axios.get(`${API_BASE_URL}/customer/vehicle/details/${vehicleId}`, { headers: { Authorization: `Bearer ${token}` } });
                         const v = vRes.data || {};
                         vehicleName = `${v.brand || ""} ${v.model || ""}`.trim() || "---";
                     } catch { }
 
                     try {
-                        const cRes = await axios.get(`http://localhost:8081/api/admin/service-centers/${serviceCenterId}`, { headers: { Authorization: `Bearer ${token}` } });
+                        const cRes = await axios.get(`${API_BASE_URL}/admin/service-centers/${serviceCenterId}`, { headers: { Authorization: `Bearer ${token}` } });
                         branchName = cRes.data?.name || "---";
                     } catch { }
 
@@ -71,7 +71,11 @@ export default function TechnicianDashboard() {
 
                 setAppointments(enriched);
             } catch (err) {
-                console.error("Error fetching appointments:", err);
+                if (axios.isCancel(err)) {
+                    console.log("🔄 Request canceled:", err.message);
+                } else {
+                    console.error("Error fetching appointments:", err);
+                }
             } finally {
                 setLoading(false);
             }
@@ -87,7 +91,7 @@ export default function TechnicianDashboard() {
         const fetchProfile = async () => {
             setLoadingProfile(true);
             try {
-                const res = await axios.get(`http://localhost:8081/api/auth/profile/${techUser.id}`, {
+                const res = await axios.get(`${API_BASE_URL}/auth/profile/${techUser.id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setTechProfile(res.data);
@@ -106,7 +110,7 @@ export default function TechnicianDashboard() {
         try {
             // Chỉ cập nhật status thôi
             await axios.put(
-                `http://localhost:8081/api/staff/appointments/${appointmentId}/status`,
+                `${API_BASE_URL}/staff/appointments/${appointmentId}/status`,
                 { status: "IN_PROGRESS" },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -162,6 +166,53 @@ export default function TechnicianDashboard() {
                             <h1 className="text-2xl font-semibold text-gray-800">Maintenance Appointments</h1>
                             <div className="text-sm text-gray-600">Total: {appointments.length}</div>
                         </header>
+
+                        {/* Rejected Reports - Needs Revision */}
+                        {appointments.filter(a => a.status === "REJECTED").length > 0 && (
+                            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 mb-6">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-2xl">⚠️</span>
+                                    <h2 className="text-lg font-semibold text-red-800">
+                                        Reports Rejected by Customer - Revision Required
+                                    </h2>
+                                </div>
+                                <div className="space-y-3">
+                                    {appointments.filter(a => a.status === "REJECTED").map(a => (
+                                        <div key={a.appointmentId} className="bg-white rounded-lg p-4 border border-red-200">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="font-semibold text-gray-800">
+                                                        Appointment #{a.appointmentId}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600 mt-1">
+                                                        🚗 {a.vehicleName}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        📅 {a.appointmentDate} at {a.appointmentTime}
+                                                    </div>
+                                                    {a.customerFeedback && (
+                                                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                                                            <div className="text-xs font-semibold text-yellow-800 mb-1">
+                                                                Customer Feedback:
+                                                            </div>
+                                                            <div className="text-sm text-gray-700">
+                                                                "{a.customerFeedback}"
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate(`${PAGE_URLS.TECHNICIAN_REPORT}/${a.appointmentId}`)}
+                                                className="mt-3 w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded"
+                                            >
+                                                🔧 Revise Report
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="bg-white shadow rounded overflow-x-auto">
                             <table className="min-w-full text-sm">

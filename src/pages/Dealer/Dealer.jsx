@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaMapMarkerAlt, FaStar, FaArrowRight, FaHome, FaCog, FaPhoneAlt } from "react-icons/fa";
 import axios from "axios";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
 export default function Dealer() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function Dealer() {
   useEffect(() => {
     const fetchDealers = async () => {
       try {
-        const res = await axios.get("http://localhost:8081/api/admin/service-centers");
+        const res = await axios.get(`${API_BASE_URL}/admin/service-centers`);
         setDealers(res.data);
       } catch (err) {
         console.error("Error fetching dealers:", err);
@@ -34,7 +34,7 @@ export default function Dealer() {
     setLoadingDealer(true);
     setSelectedDealer(null);
     try {
-      const res = await axios.get(`http://localhost:8081/api/admin/service-centers/${dealer.id}`);
+      const res = await axios.get(`${API_BASE_URL}/admin/service-centers/${dealer.id}`);
       setSelectedDealer(res.data);
     } catch (err) {
       console.error(err);

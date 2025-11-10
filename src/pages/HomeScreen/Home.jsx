@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome, FaCog, FaStar, FaMapMarkerAlt, FaPhoneAlt } from "react-icons/fa";
 import axios from "axios";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,6 +13,10 @@ export default function Home() {
   const [dealerLoading, setDealerLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [pendingQuotations, setPendingQuotations] = useState([]);
+  const [quotationsLoading, setQuotationsLoading] = useState(true);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -24,7 +28,7 @@ export default function Home() {
       }
 
       try {
-        const res = await axios.get(`http://localhost:8081/api/auth/profile/${storedUser.id}`);
+        const res = await axios.get(`${API_BASE_URL}/auth/profile/${storedUser.id}`);
         setCurrentUser(res.data);
         localStorage.setItem("loggedInUser", JSON.stringify(res.data));
       } catch (err) {
@@ -42,7 +46,7 @@ export default function Home() {
   useEffect(() => {
     const fetchDealers = async () => {
       try {
-        const res = await axios.get("http://localhost:8081/api/admin/service-centers");
+        const res = await axios.get(`${API_BASE_URL}/admin/service-centers`);
         setDealers(res.data); // giả sử res.data là mảng dealer
       } catch (err) {
         console.error("Failed to fetch dealers:", err);
@@ -66,14 +70,17 @@ export default function Home() {
       }
 
       try {
+        console.log(`Fetching bookings for user ${storedUser.id}`);
         const res = await axios.get(
-          `http://localhost:8081/api/customer/${storedUser.id}/appointments`,
+          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("Bookings response:", res.data);
         // Get only the latest 3 bookings
         setBookings((res.data || []).slice(0, 3));
       } catch (err) {
         console.error("Failed to fetch bookings:", err);
+        console.error("Error details:", err.response?.data);
         setBookings([]);
       } finally {
         setBookingsLoading(false);
@@ -81,6 +88,99 @@ export default function Home() {
     };
 
     fetchBookings();
+  }, []);
+
+  useEffect(() => {
+    const fetchPendingQuotations = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setQuotationsLoading(false);
+        return;
+      }
+
+      try {
+        console.log(`Fetching quotations for user ${storedUser.id}`);
+        // Get all appointments first
+        const appointmentsRes = await axios.get(
+          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // For each appointment, check if there's a pending quotation
+        const quotationsPromises = (appointmentsRes.data || []).map(async (appointment) => {
+          try {
+            const quotRes = await axios.get(
+              `${API_BASE_URL}/customer/totalcost/${appointment.id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            // Only return if quotation exists and is pending (customerApproved === null)
+            if (quotRes.data && quotRes.data.customerApproved === null) {
+              return {
+                appointmentId: appointment.id,
+                appointmentDate: appointment.appointmentDate,
+                appointmentTime: appointment.appointmentTime,
+                totalCost: quotRes.data.totalCost,
+                itemCount: quotRes.data.reportDetails?.length || 0
+              };
+            }
+            return null;
+          } catch (err) {
+            // No quotation for this appointment
+            return null;
+          }
+        });
+
+        const results = await Promise.all(quotationsPromises);
+        const pending = results.filter(q => q !== null);
+        setPendingQuotations(pending);
+        console.log("Pending quotations:", pending);
+      } catch (err) {
+        console.error("Failed to fetch quotations:", err);
+        setPendingQuotations([]);
+      } finally {
+        setQuotationsLoading(false);
+      }
+    };
+
+    fetchPendingQuotations();
+  }, []);
+
+  useEffect(() => {
+    const fetchPendingReports = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setReportsLoading(false);
+        return;
+      }
+
+      try {
+        console.log(`Fetching pending reports for user ${storedUser.id}`);
+        const appointmentsRes = await axios.get(
+          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Filter appointments with status COMPLETED (report sent, waiting for review)
+        const pending = (appointmentsRes.data || []).filter(
+          appt => appt.status === 'COMPLETED'
+        );
+        
+        setPendingReports(pending);
+        console.log("Pending reports:", pending);
+      } catch (err) {
+        console.error("Failed to fetch pending reports:", err);
+        setPendingReports([]);
+      } finally {
+        setReportsLoading(false);
+      }
+    };
+
+    fetchPendingReports();
   }, []);
 
   const handleLogout = () => {
@@ -108,7 +208,16 @@ export default function Home() {
 
         <div className="flex gap-4 items-center relative">
           <button onClick={() => navigate("/home")}><FaHome size={20} /></button>
-          <span>🔔</span>
+          
+          {/* Notification Bell */}
+          <div className="relative">
+            <span className="text-2xl cursor-pointer">🔔</span>
+            {pendingReports.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {pendingReports.length}
+              </span>
+            )}
+          </div>
 
           <div className="relative">
             <button onClick={() => setMenuOpen(!menuOpen)}><FaCog size={20} /></button>
@@ -200,17 +309,22 @@ export default function Home() {
               <div key={booking.id} className="bg-gray-500 rounded-md p-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-medium">
-                      {booking.vehicle?.brand || "Unknown"} {booking.vehicle?.model || ""}
+                    <div className="font-medium text-gray-200">
+                      Appointment #{booking.id}
                     </div>
                     <div className="text-xs text-gray-300 mt-1">
-                      {booking.appointmentDate || "N/A"} at {booking.appointmentTime || "N/A"}
+                      📅 {booking.appointmentDate || "N/A"} at {booking.appointmentTime || "N/A"}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      {booking.dealer?.name || "Unknown Dealer"}
+                      👨‍🔧 {booking.technicianAssigned || "Not assigned"}
                     </div>
                   </div>
-                  <div className="text-xs font-semibold px-2 py-1 bg-gray-700 rounded">
+                  <div className={`text-xs font-semibold px-2 py-1 rounded ${
+                    booking.status === 'COMPLETED' ? 'bg-green-600' :
+                    booking.status === 'PENDING' ? 'bg-yellow-600' :
+                    booking.status === 'IN_PROGRESS' ? 'bg-blue-600' :
+                    'bg-gray-700'
+                  }`}>
                     {booking.status || "Unknown"}
                   </div>
                 </div>
@@ -227,6 +341,93 @@ export default function Home() {
           View All Bookings
         </button>
       </section>
+
+      {/* Pending Reports - Action Required */}
+      {pendingReports.length > 0 && (
+        <section className="bg-red-600 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">🔔</span>
+            <h3 className="text-lg font-semibold">Reports Ready for Review - Action Required!</h3>
+          </div>
+          {reportsLoading ? (
+            <div className="text-center text-white py-4">Loading reports...</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingReports.map((report) => (
+                <div key={report.id} className="bg-white text-gray-900 rounded-md p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold text-lg">
+                        Appointment #{report.id}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        📅 {report.appointmentDate} at {report.appointmentTime}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        👨‍🔧 Technician: {report.technicianAssigned}
+                      </div>
+                    </div>
+                    <div className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded">
+                      ⏳ Waiting for Review
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/report-viewer/${report.id}`)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition"
+                  >
+                    📄 View PDF Report & Approve/Reject
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Pending Quotations Section */}
+      {pendingQuotations.length > 0 && (
+        <section className="bg-orange-600 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">⚠️</span>
+            <h3 className="text-lg font-semibold">Pending Quotations - Action Required!</h3>
+          </div>
+          {quotationsLoading ? (
+            <div className="text-center text-white py-4">Loading quotations...</div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingQuotations.map((quotation) => (
+                <div key={quotation.appointmentId} className="bg-white text-gray-900 rounded-md p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold text-lg">
+                        Appointment #{quotation.appointmentId}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        📅 {quotation.appointmentDate} at {quotation.appointmentTime}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        📋 {quotation.itemCount} maintenance tasks
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Total Cost</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        {(quotation.totalCost || 0).toLocaleString()} VND
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/quotation/${quotation.appointmentId}`)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition"
+                  >
+                    📝 Review & Approve Quotation
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Dealer Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 mb-6">

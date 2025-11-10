@@ -17,6 +17,8 @@ export const PAGE_URLS = {
   TECHNICIAN_DASHBOARD: '/technician-dashboard',
   TECHNICIAN_REPORT: "/technician-report",
   BOOKING_LIST: "/booking-list",
+  QUOTATION_APPROVAL: "/quotation",
+  REPORT_VIEWER: "/report-viewer",
 };
 
 // Other configs can be added here

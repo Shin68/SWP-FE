@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaHome } from "react-icons/fa";
+import { API_BASE_URL } from "../../App/config";
 
 export default function VehicleDetail() {
   const { state } = useLocation();
@@ -17,7 +18,7 @@ export default function VehicleDetail() {
     const fetchVehicle = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8081/api/customer/vehicle/details/${vehicleId}`
+          `${API_BASE_URL}/customer/vehicle/details/${vehicleId}`
         );
         setVehicle(res.data);
       } catch (err) {

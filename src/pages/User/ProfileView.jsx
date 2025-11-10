@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaHome } from "react-icons/fa";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 import axios from "axios";
 
 export default function ProfileView() {
@@ -17,7 +17,7 @@ export default function ProfileView() {
 
       try {
         const res = await axios.get(
-          `http://localhost:8081/api/auth/profile/${storedUser.id}`,
+          `${API_BASE_URL}/auth/profile/${storedUser.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUser(res.data);

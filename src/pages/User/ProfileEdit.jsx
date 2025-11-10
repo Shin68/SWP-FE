@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaHome } from "react-icons/fa";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export default function ProfileEdit() {
         }
 
         const res = await axios.get(
-          `http://localhost:8081/api/auth/profile/${storedUser.id}`,
+          `${API_BASE_URL}/auth/profile/${storedUser.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -64,7 +64,7 @@ export default function ProfileEdit() {
       if (!user.id) return alert("User ID missing");
 
       await axios.patch(
-        `http://localhost:8081/api/customer/update-profile/${user.id}`,
+        `${API_BASE_URL}/customer/update-profile/${user.id}`,
         {
           fullname: user.fullname,
           email: user.email,

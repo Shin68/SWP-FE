@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../../App/config";
 
 export default function ConfirmBooking() {
     const { state } = useLocation();
@@ -18,7 +19,7 @@ export default function ConfirmBooking() {
         const fetchVehicle = async () => {
             try {
                 const res = await axios.get(
-                    `http://localhost:8081/api/customer/vehicle/details/${state.vehicleId}`
+                    `${API_BASE_URL}/customer/vehicle/details/${state.vehicleId}`
                 );
                 setVehicle(res.data);
             } catch (err) {
@@ -42,7 +43,7 @@ export default function ConfirmBooking() {
 
         try {
             await axios.post(
-                `http://localhost:8081/api/customer/appointment/create/${vehicleId}/${dealer.id}`,
+                `${API_BASE_URL}/customer/appointment/create/${vehicleId}/${dealer.id}`,
                 {
                     appointmentDate: date,
                     appointmentTime: time

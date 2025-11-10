@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { PAGE_URLS } from "../../App/config";
+import { PAGE_URLS, API_BASE_URL } from "../../App/config";
 
 export default function SelectTechnician() {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export default function SelectTechnician() {
       try {
         console.log("📡 Fetching technicians...");
         const res = await axios.get(
-          "http://localhost:8081/api/admin/users/role/TECHNICIAN",
+          "`${API_BASE_URL}/admin/users/role/TECHNICIAN",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setTechnicians(res.data || []);
@@ -47,7 +47,7 @@ export default function SelectTechnician() {
       setSubmitting(true);
       console.log(`🚀 Assigning technician ${selected} to appointment ${appointmentId}`);
 
-      const url = `http://localhost:8081/api/staff/${appointmentId}/assign?technicianId=${selected}`;
+      const url = `${API_BASE_URL}/staff/${appointmentId}/assign?technicianId=${selected}`;
 
       const res = await axios.put(url, {}, {
         headers: { Authorization: `Bearer ${token}` },
