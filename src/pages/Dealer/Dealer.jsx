@@ -19,7 +19,7 @@ export default function Dealer() {
   useEffect(() => {
     const fetchDealers = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/admin/service-centers");
+        const res = await axios.get("http://localhost:8081/api/admin/service-centers");
         setDealers(res.data);
       } catch (err) {
         console.error("Error fetching dealers:", err);
@@ -34,7 +34,7 @@ export default function Dealer() {
     setLoadingDealer(true);
     setSelectedDealer(null);
     try {
-      const res = await axios.get(`http://localhost:8080/api/admin/service-centers/${dealer.id}`);
+      const res = await axios.get(`http://localhost:8081/api/admin/service-centers/${dealer.id}`);
       setSelectedDealer(res.data);
     } catch (err) {
       console.error(err);

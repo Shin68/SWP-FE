@@ -29,7 +29,7 @@ export default function Login() {
     e.preventDefault();
     setMessage("");
     try {
-      const res = await axios.post("http://localhost:8080/api/auth/login", { phone, password });
+      const res = await axios.post("http://localhost:8081/api/auth/login", { phone, password });
       const { token, user } = res.data;
       const userData = user || res.data;
 
@@ -72,7 +72,7 @@ export default function Login() {
     if (!forgotEmail) return setMessage("Enter your email first.");
     setMessage("");
     try {
-      await axios.post("http://localhost:8080/api/auth/forgot-password", { email: forgotEmail });
+      await axios.post("http://localhost:8081/api/auth/forgot-password", { email: forgotEmail });
       setForgotStep(2);
       setMessage("OTP sent to your email");
     } catch (err) {
@@ -85,7 +85,7 @@ export default function Login() {
     if (!otp) return setMessage("Enter OTP.");
     setMessage("");
     try {
-      await axios.post("http://localhost:8080/api/auth/verify-otp", { email: forgotEmail, otp });
+      await axios.post("http://localhost:8081/api/auth/verify-otp", { email: forgotEmail, otp });
       setForgotStep(3);
       setMessage("OTP verified");
     } catch (err) {
@@ -99,7 +99,7 @@ export default function Login() {
     if (newPassword !== confirmPassword) return setMessage("Passwords do not match.");
     setMessage("");
     try {
-      await axios.post("http://localhost:8080/api/auth/reset-password", {
+      await axios.post("http://localhost:8081/api/auth/reset-password", {
         email: forgotEmail,
         otp,
         newPassword,

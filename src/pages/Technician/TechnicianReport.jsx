@@ -14,7 +14,7 @@ export default function TechnicianReport() {
         setLoading(true);
         try {
             const res = await axios.get(
-                `http://localhost:8080/api/technician/${appointmentId}/tasks`,
+                `http://localhost:8081/api/technician/${appointmentId}/tasks`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setDetails(res.data || []);
@@ -33,7 +33,7 @@ export default function TechnicianReport() {
         setUpdatingId(detailId);
         try {
             await axios.patch(
-                `http://localhost:8080/api/technician/reports/details/${detailId}`,
+                `http://localhost:8081/api/technician/reports/details/${detailId}`,
                 updatedData,
                 { headers: { Authorization: `Bearer ${token}` } }
             );

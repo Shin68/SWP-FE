@@ -52,7 +52,7 @@ export default function Register() {
     };
 
     try {
-      await axios.post("http://localhost:8080/api/auth/register", registerRequest);
+      await axios.post("http://localhost:8081/api/auth/register", registerRequest);
       setMessage("Registration successful! Redirecting...");
       setError("");
       setTimeout(() => navigate(PAGE_URLS.LOGIN), 1500);

@@ -35,7 +35,7 @@ export default function StaffDashboard() {
       setLoading(true);
       try {
         console.log("📡 Fetching appointments...");
-        const res = await axios.get("http://localhost:8080/api/staff/appointments", {
+        const res = await axios.get("http://localhost:8081/api/staff/appointments", {
           headers: { Authorization: `Bearer ${token}` },
           cancelToken: source.token,
         });
@@ -63,7 +63,7 @@ export default function StaffDashboard() {
 
           try {
             const cusRes = await axios.get(
-              `http://localhost:8080/api/auth/profile/${customerId}`,
+              `http://localhost:8081/api/auth/profile/${customerId}`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             const profile = cusRes.data || {};
@@ -75,7 +75,7 @@ export default function StaffDashboard() {
 
           try {
             const vehRes = await axios.get(
-              `http://localhost:8080/api/customer/vehicle/details/${vehicleId}`,
+              `http://localhost:8081/api/customer/vehicle/details/${vehicleId}`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             const v = vehRes.data || {};
@@ -86,7 +86,7 @@ export default function StaffDashboard() {
 
           try {
             const cenRes = await axios.get(
-              `http://localhost:8080/api/admin/service-centers/${serviceCenterId}`,
+              `http://localhost:8081/api/admin/service-centers/${serviceCenterId}`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
             const c = cenRes.data || {};
@@ -129,7 +129,7 @@ export default function StaffDashboard() {
       try {
         console.log("📡 Fetching staff profile...");
         const res = await axios.get(
-          `http://localhost:8080/api/auth/profile/${staffUser.id}`,
+          `http://localhost:8081/api/auth/profile/${staffUser.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         console.log("✅ Staff profile:", res.data);

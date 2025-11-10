@@ -29,7 +29,7 @@ export default function ProfileEdit() {
         }
 
         const res = await axios.get(
-          `http://localhost:8080/api/auth/profile/${storedUser.id}`,
+          `http://localhost:8081/api/auth/profile/${storedUser.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -64,7 +64,7 @@ export default function ProfileEdit() {
       if (!user.id) return alert("User ID missing");
 
       await axios.patch(
-        `http://localhost:8080/api/customer/update-profile/${user.id}`,
+        `http://localhost:8081/api/customer/update-profile/${user.id}`,
         {
           fullname: user.fullname,
           email: user.email,

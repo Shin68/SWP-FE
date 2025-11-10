@@ -11,6 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [dealers, setDealers] = useState([]);
   const [dealerLoading, setDealerLoading] = useState(true);
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -22,7 +24,7 @@ export default function Home() {
       }
 
       try {
-        const res = await axios.get(`http://localhost:8080/api/auth/profile/${storedUser.id}`);
+        const res = await axios.get(`http://localhost:8081/api/auth/profile/${storedUser.id}`);
         setCurrentUser(res.data);
         localStorage.setItem("loggedInUser", JSON.stringify(res.data));
       } catch (err) {
@@ -40,7 +42,7 @@ export default function Home() {
   useEffect(() => {
     const fetchDealers = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/admin/service-centers");
+        const res = await axios.get("http://localhost:8081/api/admin/service-centers");
         setDealers(res.data); // giả sử res.data là mảng dealer
       } catch (err) {
         console.error("Failed to fetch dealers:", err);
@@ -51,6 +53,34 @@ export default function Home() {
     };
 
     fetchDealers();
+  }, []);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setBookingsLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get(
+          `http://localhost:8081/api/customer/${storedUser.id}/appointments`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // Get only the latest 3 bookings
+        setBookings((res.data || []).slice(0, 3));
+      } catch (err) {
+        console.error("Failed to fetch bookings:", err);
+        setBookings([]);
+      } finally {
+        setBookingsLoading(false);
+      }
+    };
+
+    fetchBookings();
   }, []);
 
   const handleLogout = () => {
@@ -131,9 +161,9 @@ export default function Home() {
               <div key={vehicle.id} className="flex justify-between items-center bg-gray-500 rounded-md p-3">
                 <div className="flex items-center gap-3">
                   <div>
-                    <div className="font-medium">{vehicle.make} {vehicle.model}</div>
+                    <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
                     <div className="text-xs text-gray-400">
-                      Year: {vehicle.year ?? 'N/A'} - {(vehicle.mileage ?? 0).toLocaleString()} km
+                      Year: {vehicle.year ?? 'N/A'} - {(vehicle.odometer ?? 0).toLocaleString()} km
                     </div>
                   </div>
                 </div>
@@ -162,11 +192,39 @@ export default function Home() {
       {/* Bookings Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-3">My Bookings</h3>
+        {bookingsLoading ? (
+          <div className="text-center text-gray-400 py-4">Loading bookings...</div>
+        ) : bookings.length > 0 ? (
+          <div className="flex flex-col gap-2 mb-3">
+            {bookings.map((booking) => (
+              <div key={booking.id} className="bg-gray-500 rounded-md p-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-medium">
+                      {booking.vehicle?.brand || "Unknown"} {booking.vehicle?.model || ""}
+                    </div>
+                    <div className="text-xs text-gray-300 mt-1">
+                      {booking.appointmentDate || "N/A"} at {booking.appointmentTime || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {booking.dealer?.name || "Unknown Dealer"}
+                    </div>
+                  </div>
+                  <div className="text-xs font-semibold px-2 py-1 bg-gray-700 rounded">
+                    {booking.status || "Unknown"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-400 py-4">No bookings yet</div>
+        )}
         <button
           onClick={() => navigate(PAGE_URLS.BOOKING_LIST)}
           className="w-full bg-gray-800 hover:bg-gray-900 text-sm py-2 rounded"
         >
-          View My Bookings
+          View All Bookings
         </button>
       </section>
 

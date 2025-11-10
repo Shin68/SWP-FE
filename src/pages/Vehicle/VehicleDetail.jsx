@@ -17,7 +17,7 @@ export default function VehicleDetail() {
     const fetchVehicle = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/customer/vehicle/details/${vehicleId}`
+          `http://localhost:8081/api/customer/vehicle/details/${vehicleId}`
         );
         setVehicle(res.data);
       } catch (err) {

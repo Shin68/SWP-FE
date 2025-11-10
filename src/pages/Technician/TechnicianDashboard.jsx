@@ -32,7 +32,7 @@ export default function TechnicianDashboard() {
         const fetchAppointments = async () => {
             setLoading(true);
             try {
-                const res = await axios.get("http://localhost:8080/api/staff/appointments", {
+                const res = await axios.get("http://localhost:8081/api/staff/appointments", {
                     headers: { Authorization: `Bearer ${token}` },
                     cancelToken: source.token,
                 });
@@ -56,13 +56,13 @@ export default function TechnicianDashboard() {
                     let vehicleName = "---";
                     let branchName = "---";
                     try {
-                        const vRes = await axios.get(`http://localhost:8080/api/customer/vehicle/details/${vehicleId}`, { headers: { Authorization: `Bearer ${token}` } });
+                        const vRes = await axios.get(`http://localhost:8081/api/customer/vehicle/details/${vehicleId}`, { headers: { Authorization: `Bearer ${token}` } });
                         const v = vRes.data || {};
                         vehicleName = `${v.brand || ""} ${v.model || ""}`.trim() || "---";
                     } catch { }
 
                     try {
-                        const cRes = await axios.get(`http://localhost:8080/api/admin/service-centers/${serviceCenterId}`, { headers: { Authorization: `Bearer ${token}` } });
+                        const cRes = await axios.get(`http://localhost:8081/api/admin/service-centers/${serviceCenterId}`, { headers: { Authorization: `Bearer ${token}` } });
                         branchName = cRes.data?.name || "---";
                     } catch { }
 
@@ -87,7 +87,7 @@ export default function TechnicianDashboard() {
         const fetchProfile = async () => {
             setLoadingProfile(true);
             try {
-                const res = await axios.get(`http://localhost:8080/api/auth/profile/${techUser.id}`, {
+                const res = await axios.get(`http://localhost:8081/api/auth/profile/${techUser.id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setTechProfile(res.data);
@@ -106,7 +106,7 @@ export default function TechnicianDashboard() {
         try {
             // Chỉ cập nhật status thôi
             await axios.put(
-                `http://localhost:8080/api/staff/appointments/${appointmentId}/status`,
+                `http://localhost:8081/api/staff/appointments/${appointmentId}/status`,
                 { status: "IN_PROGRESS" },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

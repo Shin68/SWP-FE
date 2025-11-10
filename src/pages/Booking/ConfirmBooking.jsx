@@ -18,7 +18,7 @@ export default function ConfirmBooking() {
         const fetchVehicle = async () => {
             try {
                 const res = await axios.get(
-                    `http://localhost:8080/api/customer/vehicle/details/${state.vehicleId}`
+                    `http://localhost:8081/api/customer/vehicle/details/${state.vehicleId}`
                 );
                 setVehicle(res.data);
             } catch (err) {
@@ -42,7 +42,7 @@ export default function ConfirmBooking() {
 
         try {
             await axios.post(
-                `http://localhost:8080/api/customer/appointment/create/${vehicleId}/${dealer.id}`,
+                `http://localhost:8081/api/customer/appointment/create/${vehicleId}/${dealer.id}`,
                 {
                     appointmentDate: date,
                     appointmentTime: time

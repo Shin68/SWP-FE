@@ -17,7 +17,7 @@ export default function ProfileView() {
 
       try {
         const res = await axios.get(
-          `http://localhost:8080/api/auth/profile/${storedUser.id}`,
+          `http://localhost:8081/api/auth/profile/${storedUser.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setUser(res.data);

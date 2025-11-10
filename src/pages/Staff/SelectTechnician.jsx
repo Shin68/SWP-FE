@@ -24,7 +24,7 @@ export default function SelectTechnician() {
       try {
         console.log("📡 Fetching technicians...");
         const res = await axios.get(
-          "http://localhost:8080/api/admin/users/role/TECHNICIAN",
+          "http://localhost:8081/api/admin/users/role/TECHNICIAN",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setTechnicians(res.data || []);
@@ -47,7 +47,7 @@ export default function SelectTechnician() {
       setSubmitting(true);
       console.log(`🚀 Assigning technician ${selected} to appointment ${appointmentId}`);
 
-      const url = `http://localhost:8080/api/staff/${appointmentId}/assign?technicianId=${selected}`;
+      const url = `http://localhost:8081/api/staff/${appointmentId}/assign?technicianId=${selected}`;
 
       const res = await axios.put(url, {}, {
         headers: { Authorization: `Bearer ${token}` },
