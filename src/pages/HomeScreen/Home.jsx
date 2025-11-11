@@ -20,6 +20,7 @@ export default function Home() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -163,15 +164,41 @@ export default function Home() {
 
       try {
         console.log(`Fetching pending reports for user ${storedUser.id}`);
-        const appointmentsRes = await axios.get(
-          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
+        const pendingReportsRes = await axios.get(
+          `${API_BASE_URL}/customer/${storedUser.id}/pending-reports`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        // Don't show any pending reports - they should go through payment flow
-        // Only PAYMENT_PENDING appointments need action
-        setPendingReports([]);
-        console.log("Pending reports: disabled (using payment flow only)");
+        // Get detailed information for each pending report
+        const reportsNeedingReview = [];
+        
+        for (const appointment of pendingReportsRes.data || []) {
+          let quotationData = null;
+          
+          try {
+            // Get quotation data for this appointment
+            const reportRes = await axios.get(
+              `${API_BASE_URL}/customer/totalcost/${appointment.id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            quotationData = reportRes.data;
+          } catch (err) {
+            console.log(`No quotation yet for appointment ${appointment.id}`);
+          }
+          
+          reportsNeedingReview.push({
+            id: appointment.id,
+            appointmentDate: appointment.appointmentDate,
+            appointmentTime: appointment.appointmentTime,
+            technicianAssigned: appointment.technicianAssigned,
+            totalCost: quotationData?.totalCost || 0,
+            itemCount: quotationData?.reportDetails?.length || 0,
+            status: appointment.status
+          });
+        }
+        
+        setPendingReports(reportsNeedingReview);
+        console.log("Reports needing review:", reportsNeedingReview);
       } catch (err) {
         console.error("Failed to fetch pending reports:", err);
         setPendingReports([]);
@@ -218,6 +245,45 @@ export default function Home() {
     fetchPendingPayments();
   }, []);
 
+  const handleCancelAppointment = async (appointmentId) => {
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) {
+      return;
+    }
+
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+
+    if (!storedUser || !token) {
+      alert("Please login to cancel appointment");
+      return;
+    }
+
+    setCancellingId(appointmentId);
+    
+    try {
+      await axios.put(
+        `${API_BASE_URL}/customer/appointment/${appointmentId}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      alert("Appointment cancelled successfully!");
+      
+      // Refresh bookings list
+      const res = await axios.get(
+        `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setBookings((res.data || []).slice(0, 3));
+      
+    } catch (err) {
+      console.error("Failed to cancel appointment:", err);
+      alert(err.response?.data || "Failed to cancel appointment");
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("loggedInUser");
     setMenuOpen(false);
@@ -248,9 +314,9 @@ export default function Home() {
           <div className="relative">
             <button onClick={() => setShowNotificationModal(!showNotificationModal)}>
               <span className="text-2xl cursor-pointer">🔔</span>
-              {(pendingReports.length + pendingPayments.length) > 0 && (
+              {(pendingReports.length + pendingPayments.length + pendingQuotations.length) > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                  {pendingReports.length + pendingPayments.length}
+                  {pendingReports.length + pendingPayments.length + pendingQuotations.length}
                 </span>
               )}
             </button>
@@ -344,27 +410,43 @@ export default function Home() {
           <div className="flex flex-col gap-2 mb-3">
             {bookings.map((booking) => (
               <div key={booking.id} className="bg-gray-500 rounded-md p-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-medium text-gray-200">
-                      Appointment #{booking.id}
-                    </div>
-                    <div className="text-xs text-gray-300 mt-1">
-                      📅 {booking.appointmentDate || "N/A"} at {booking.appointmentTime || "N/A"}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      👨‍🔧 {booking.technicianAssigned || "Not assigned"}
-                    </div>
-                  </div>
-                  <div className={`text-xs font-semibold px-2 py-1 rounded ${
-                    booking.status === 'COMPLETED' ? 'bg-green-600' :
-                    booking.status === 'PENDING' ? 'bg-yellow-600' :
-                    booking.status === 'IN_PROGRESS' ? 'bg-blue-600' :
-                    'bg-gray-700'
-                  }`}>
-                    {booking.status || "Unknown"}
-                  </div>
-                </div>
+                 <div className="flex justify-between items-start">
+                   <div className="flex-1">
+                     <div className="font-medium text-gray-200">
+                       Appointment #{booking.id}
+                     </div>
+                     <div className="text-xs text-gray-300 mt-1">
+                       📅 {booking.appointmentDate || "N/A"} at {booking.appointmentTime || "N/A"}
+                     </div>
+                     <div className="text-xs text-gray-400 mt-1">
+                       👨‍🔧 {booking.technicianAssigned || "Not assigned"}
+                     </div>
+                   </div>
+                   <div className="flex flex-col items-end gap-2">
+                     <div className={`text-xs font-semibold px-2 py-1 rounded ${
+                       booking.status === 'COMPLETED' ? 'bg-green-600' :
+                       booking.status === 'PENDING' ? 'bg-yellow-600' :
+                       booking.status === 'IN_PROGRESS' ? 'bg-blue-600' :
+                       booking.status === 'CANCELLED' ? 'bg-red-600' :
+                       'bg-gray-700'
+                     }`}>
+                       {booking.status || "Unknown"}
+                     </div>
+                     {booking.status === 'PENDING' && (
+                       <button
+                         onClick={() => handleCancelAppointment(booking.id)}
+                         disabled={cancellingId === booking.id}
+                         className={`text-xs px-3 py-1 rounded font-medium transition ${
+                           cancellingId === booking.id
+                             ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                             : 'bg-red-600 text-white hover:bg-red-700'
+                         }`}
+                       >
+                         {cancellingId === booking.id ? 'Cancelling...' : 'Cancel'}
+                       </button>
+                     )}
+                   </div>
+                 </div>
               </div>
             ))}
           </div>
@@ -431,10 +513,10 @@ export default function Home() {
 
       {/* Pending Reports - Action Required */}
       {pendingReports.length > 0 && (
-        <section className="bg-red-600 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
+        <section className="bg-blue-600 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">🔔</span>
-            <h3 className="text-lg font-semibold">Reports Ready for Review - Action Required!</h3>
+            <span className="text-2xl">📋</span>
+            <h3 className="text-lg font-semibold">Reports Sent for Your Review - Action Required!</h3>
           </div>
           {reportsLoading ? (
             <div className="text-center text-white py-4">Loading reports...</div>
@@ -453,14 +535,29 @@ export default function Home() {
                       <div className="text-sm text-gray-600">
                         👨‍🔧 Technician: {report.technicianAssigned}
                       </div>
+                      {report.itemCount > 0 && (
+                        <div className="text-sm text-gray-600">
+                          📋 {report.itemCount} maintenance tasks
+                        </div>
+                      )}
+                      {report.totalCost > 0 && (
+                        <div className="text-sm font-semibold text-blue-600 mt-1">
+                          💰 Total Cost: {report.totalCost.toLocaleString()} VND
+                        </div>
+                      )}
                     </div>
-                    <div className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded">
-                      ⏳ Waiting for Review
+                    <div className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">
+                      📤 Report Sent - Awaiting Your Review
                     </div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
+                    <p className="text-sm text-gray-800">
+                      The technician has sent the service report for your review. Please view the PDF and approve or reject the quotation.
+                    </p>
                   </div>
                   <button
                     onClick={() => navigate(`/report-viewer/${report.id}`)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded transition"
                   >
                     📄 View PDF Report & Approve/Reject
                   </button>
@@ -566,9 +663,9 @@ export default function Home() {
             <div className="sticky top-0 bg-gray-800 border-b border-gray-600 p-4 flex justify-between items-center">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 🔔 Notifications
-                {(pendingReports.length + pendingPayments.length) > 0 && (
+                {(pendingReports.length + pendingPayments.length + pendingQuotations.length) > 0 && (
                   <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
-                    {pendingReports.length + pendingPayments.length}
+                    {pendingReports.length + pendingPayments.length + pendingQuotations.length}
                   </span>
                 )}
               </h3>
@@ -616,16 +713,16 @@ export default function Home() {
               {pendingReports.map((report) => (
                 <div 
                   key={`report-${report.id}`}
-                  className="bg-orange-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-orange-600 transition"
+                  className="bg-blue-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-blue-600 transition"
                   onClick={() => {
                     setShowNotificationModal(false);
                     navigate(`/report-viewer/${report.id}`);
                   }}
                 >
                   <div className="flex items-start gap-2 mb-2">
-                    <span className="text-2xl">📄</span>
+                    <span className="text-2xl">📋</span>
                     <div className="flex-1">
-                      <div className="font-semibold text-white">Report Ready for Review</div>
+                      <div className="font-semibold text-white">Service Report Ready</div>
                       <div className="text-xs text-gray-200 mt-1">
                         Appointment #{report.id}
                       </div>
@@ -635,16 +732,21 @@ export default function Home() {
                       <div className="text-xs text-gray-300">
                         👨‍🔧 {report.technicianAssigned}
                       </div>
+                      {report.totalCost > 0 && (
+                        <div className="text-xs text-yellow-200 mt-1">
+                          💰 {report.totalCost.toLocaleString()} VND
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-xs text-yellow-200 mt-2">
-                    Click to view & approve report →
+                    Click to view PDF report & approve/reject →
                   </div>
                 </div>
               ))}
 
               {/* No Notifications */}
-              {pendingPayments.length === 0 && pendingReports.length === 0 && (
+              {pendingPayments.length === 0 && pendingReports.length === 0 && pendingQuotations.length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   <div className="text-4xl mb-2">✅</div>
                   <div className="text-sm">No pending notifications</div>

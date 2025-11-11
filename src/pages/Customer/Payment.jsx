@@ -30,7 +30,14 @@ export default function Payment() {
                 console.log("Payment status:", res.data.status);
             } catch (err) {
                 console.error("Error fetching payment info:", err);
-                alert("Failed to load payment information!");
+                const errorMsg = err.response?.data?.message || err.message || "Failed to load payment information!";
+                
+                // Handle specific error cases
+                if (errorMsg.includes("Appointment not found")) {
+                    alert("Appointment not found. Please check the appointment ID and try again.");
+                } else {
+                    alert("Error: " + errorMsg);
+                }
             } finally {
                 setLoading(false);
             }
@@ -151,13 +158,24 @@ export default function Payment() {
                             <span className="font-semibold">{paymentInfo.appointmentDate}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Status:</span>
+                            <span className="text-gray-400">Appointment Status:</span>
                             <span className={`font-semibold px-2 py-1 rounded text-xs ${
-                                paymentInfo.status === "COMPLETED" ? "bg-green-600" :
-                                paymentInfo.status === "PENDING" ? "bg-yellow-600" :
+                                paymentInfo.appointmentStatus === "COMPLETED" ? "bg-green-600" :
+                                paymentInfo.appointmentStatus === "PAYMENT_PENDING" ? "bg-blue-600" :
+                                paymentInfo.appointmentStatus === "PENDING" ? "bg-yellow-600" :
                                 "bg-gray-600"
                             }`}>
-                                {paymentInfo.status}
+                                {paymentInfo.appointmentStatus === "PAYMENT_PENDING" ? "Ready for Payment" : paymentInfo.appointmentStatus}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Payment Status:</span>
+                            <span className={`font-semibold px-2 py-1 rounded text-xs ${
+                                paymentInfo.paymentStatus === "COMPLETED" ? "bg-green-600" :
+                                paymentInfo.paymentStatus === "PENDING" ? "bg-yellow-600" :
+                                "bg-gray-600"
+                            }`}>
+                                {paymentInfo.paymentStatus}
                             </span>
                         </div>
                     </div>
@@ -220,12 +238,42 @@ export default function Payment() {
                     </div>
                 )}
 
+                {/* No Invoice Items Message */}
+                {(!paymentInfo.invoiceItems || paymentInfo.invoiceItems.length === 0) && (
+                    <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+                        <div className="text-center">
+                            <div className="text-gray-400 text-6xl mb-4">📋</div>
+                            <p className="text-gray-600 text-lg mb-2">No Service Details Found</p>
+                            <p className="text-gray-500 text-sm">
+                                Service report details may not be generated yet. Please contact staff.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Payment Method Selection */}
-                {paymentInfo.status !== "COMPLETED" && (
+                {(paymentInfo.appointmentStatus === "COMPLETED" || paymentInfo.appointmentStatus === "PAYMENT_PENDING") && paymentInfo.paymentStatus !== "COMPLETED" && (
                     <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
                         <h2 className="text-xl font-semibold mb-4 border-b border-gray-600 pb-2">
                             💰 Select Payment Method
                         </h2>
+                        
+                        {/* Warning for zero amount */}
+                        {paymentInfo.amount === 0 && (
+                            <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-4 mb-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-yellow-400 text-xl">⚠️</span>
+                                    <div>
+                                        <p className="text-yellow-300 font-semibold">Payment Amount is 0 VND</p>
+                                        <p className="text-yellow-400 text-sm">
+                                            Service costs may not be set yet. Please contact staff or update service details first.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show payment interface even if amount is 0 */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             {/* VNPay Option */}
                             <div
@@ -297,7 +345,7 @@ export default function Payment() {
                 )}
 
                 {/* Already Paid */}
-                {paymentInfo.status === "COMPLETED" && (
+                {paymentInfo.paymentStatus === "COMPLETED" && (
                     <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-8 text-center">
                         <div className="text-6xl mb-4">✅</div>
                         <h2 className="text-2xl font-bold mb-2">Payment Completed!</h2>
