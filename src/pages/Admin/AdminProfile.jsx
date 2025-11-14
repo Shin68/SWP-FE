@@ -1,288 +1,189 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { FaList, FaSignOutAlt, FaSpinner, FaUsers, FaUserCog } from "react-icons/fa";
 import axios from "axios";
+import { FaHome } from "react-icons/fa";
 import { PAGE_URLS, API_BASE_URL } from "../../App/config";
-
-// Modal Edit Profile
-function EditProfileModal({ profile, token, onClose, onUpdated }) {
-    const [fullname, setFullname] = useState(profile.fullname);
-    const [email, setEmail] = useState(profile.email);
-    const [phone] = useState(profile.phone || "");
-    const [address, setAddress] = useState(profile.address || "");
-    const [dob, setDob] = useState(profile.dob || "");
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        setFullname(profile.fullname);
-        setEmail(profile.email);
-        setAddress(profile.address || "");
-        setDob(profile.dob || "");
-    }, [profile]);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await axios.put(
-                `${API_BASE_URL}/auth/profile/${profile.id}`,
-                { fullname, email, address, dob },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            onUpdated();
-            onClose();
-        } catch (err) {
-            console.error("Error updating profile:", err);
-            alert("Update failed!");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-xl font-semibold mb-4">Edit Profile</h3>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                    <input
-                        className="w-full px-3 py-2 border rounded"
-                        placeholder="Full Name"
-                        value={fullname}
-                        onChange={(e) => setFullname(e.target.value)}
-                        required
-                    />
-                    <input
-                        className="w-full px-3 py-2 border rounded"
-                        placeholder="Email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        className="w-full px-3 py-2 border rounded bg-gray-100"
-                        placeholder="Phone"
-                        value={phone}
-                        readOnly
-                    />
-                    <input
-                        className="w-full px-3 py-2 border rounded"
-                        placeholder="Address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                    />
-                    <input
-                        className="w-full px-3 py-2 border rounded"
-                        type="date"
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                    />
-                    <div className="flex justify-end gap-2 mt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            disabled={loading}
-                        >
-                            {loading ? "Saving..." : "Save"}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
+import { useNavigate } from "react-router-dom";
 
 export default function AdminProfile() {
     const navigate = useNavigate();
-
-    // State
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [editing, setEditing] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
-
-    // User + token
-    const storedUser = localStorage.getItem("user");
-    const currentUser = storedUser ? JSON.parse(storedUser) : null;
     const token = localStorage.getItem("token");
 
-    // Redirect nếu chưa đăng nhập
-    useEffect(() => {
-        if (!currentUser || !currentUser.id || !token) {
-            navigate(PAGE_URLS.LOGIN);
-        }
-    }, [navigate, currentUser, token]);
+    const [loading, setLoading] = useState(true);
+    const [admin, setAdmin] = useState({
+        id: "",
+        fullname: "",
+        email: "",
+        address: "",
+        dob: "",
+        phone: "",
+        role: "",
+        vehicles: [] // luôn có mảng để backend không lỗi
+    });
 
-    // Fetch profile
+    // Fetch current admin info
     useEffect(() => {
-        if (!currentUser?.id || !token) return;
-
-        const fetchProfile = async () => {
-            setLoading(true);
+        const fetchAdmin = async () => {
             try {
-                const res = await axios.get(`${API_BASE_URL}/auth/profile/${currentUser.id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                setProfile(res.data);
-            } catch (err) {
-                console.error("Error fetching profile:", err);
-                if (err.response?.status === 401) {
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("token");
+                const stored = JSON.parse(localStorage.getItem("user"));
+                if (!stored || stored.role !== "ADMIN") {
                     navigate(PAGE_URLS.LOGIN);
-                } else {
-                    alert("Failed to load profile.");
+                    return;
                 }
+
+                const res = await axios.get(
+                    `${API_BASE_URL}/auth/profile/${stored.id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                setAdmin({
+                    id: res.data.id,
+                    fullname: res.data.fullname || "",
+                    email: res.data.email || "",
+                    address: res.data.address || "",
+                    dob: res.data.dob || "",
+                    phone: res.data.phone || "",
+                    role: res.data.role || "",
+                    vehicles: res.data.vehicles || []
+                });
+            } catch (err) {
+                console.error("Error fetching admin profile:", err);
+                alert("Cannot fetch profile data!");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchProfile();
-    }, [currentUser?.id, token, refreshKey]);
+        fetchAdmin();
+    }, [navigate, token]);
 
-    const handleLogout = () => {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        navigate(PAGE_URLS.LOGIN);
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setAdmin((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleSave = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                id: admin.id,
+                fullname: admin.fullname,
+                email: admin.email,
+                address: admin.address,
+                dob: admin.dob,
+                phone: admin.phone,
+                role: admin.role,
+                vehicles: admin.vehicles // luôn gửi mảng
+            };
+
+            await axios.put(
+                `${API_BASE_URL}/auth/profile/${admin.id}`,
+                payload,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            alert("Profile updated successfully!");
+        } catch (err) {
+            console.error("Update admin profile failed:", err);
+            alert("Failed to update profile. Check console.");
+        }
+    };
+
+    if (loading) return <div className="p-6 text-white">Loading...</div>;
+
     return (
-        <div className="min-h-screen flex bg-gray-100">
-            {/* Sidebar - giống Dashboard */}
-            <aside className="w-64 bg-gray-900 text-white fixed top-0 left-0 bottom-0 flex flex-col">
-                <div className="p-4 border-b border-gray-800">
-                    <div className="text-xl font-bold">Admin Portal</div>
-                </div>
+        <div className="min-h-screen bg-gray-700 text-white">
+            {/* Header */}
+            <header className="bg-gray-800 p-4 flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Admin Profile</h2>
+                <button
+                    onClick={() => navigate(PAGE_URLS.ADMIN_DASHBOARD)}
+                    className="bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded flex items-center"
+                >
+                    <FaHome className="mr-2" /> Dashboard
+                </button>
+            </header>
 
-                <nav className="flex-1 p-2">
-                    <button
-                        onClick={() => navigate(PAGE_URLS.ADMIN_DASHBOARD)}
-                        className="w-full text-left px-3 py-3 rounded flex items-center gap-3 hover:bg-gray-800 text-gray-300"
-                    >
-                        <FaList /> <span>Appointment List</span>
-                    </button>
+            {/* Form */}
+            <div className="max-w-3xl mx-auto mt-10 bg-gray-800 p-8 rounded-lg shadow-lg">
+                <form onSubmit={handleSave} className="space-y-4 text-gray-200">
+                    <div>
+                        <label className="block mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            name="fullname"
+                            value={admin.fullname}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                            required
+                        />
+                    </div>
 
-                    <button
-                        onClick={() => navigate(PAGE_URLS.ADMIN_DASHBOARD + "?tab=users")}
-                        className="w-full text-left px-3 py-3 rounded flex items-center gap-3 mt-2 hover:bg-gray-800 text-gray-300"
-                    >
-                        <FaUsers /> <span>User List</span>
-                    </button>
+                    <div>
+                        <label className="block mb-1">Email</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={admin.email}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                            required
+                        />
+                    </div>
 
-                    <button
-                        onClick={() => navigate(PAGE_URLS.ADMIN_PROFILE)}
-                        className="w-full text-left px-3 py-3 rounded flex items-center gap-3 mt-2 bg-gray-800 text-white"
-                    >
-                        <FaUserCog /> <span>My Profile</span>
-                    </button>
+                    <div>
+                        <label className="block mb-1">Phone</label>
+                        <input
+                            type="text"
+                            name="phone"
+                            value={admin.phone}
+                            readOnly
+                            className="w-full bg-gray-600 text-gray-300 px-3 py-2 rounded cursor-not-allowed"
+                        />
+                    </div>
 
-                    <div className="mt-6 border-t border-gray-800 pt-4">
+                    <div>
+                        <label className="block mb-1">Address</label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={admin.address}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-1">Date of Birth</label>
+                        <input
+                            type="date"
+                            name="dob"
+                            value={admin.dob}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                        />
+                    </div>
+
+                    {/* Role (readonly) */}
+                    <div>
+                        <label className="block mb-1">Role</label>
+                        <input
+                            type="text"
+                            value={admin.role}
+                            readOnly
+                            className="w-full bg-gray-600 text-gray-300 px-3 py-2 rounded cursor-not-allowed"
+                        />
+                    </div>
+
+                    <div className="flex justify-end mt-4">
                         <button
-                            onClick={handleLogout}
-                            className="w-full text-left px-3 py-3 rounded flex items-center gap-3 hover:bg-red-800 text-red-300"
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition-all"
                         >
-                            <FaSignOutAlt /> <span>Logout</span>
+                            Save
                         </button>
                     </div>
-                </nav>
-
-                <div className="p-4 border-t border-gray-800 text-xs text-gray-400">
-                    <div>Logged in as</div>
-                    <div className="mt-1 font-medium">{currentUser?.fullname || "User"}</div>
-                </div>
-            </aside>
-
-            {/* Main Content - giống bảng Dashboard */}
-            <main className="flex-1 ml-64 p-8">
-                <div className="bg-white shadow rounded-lg p-8 max-w-5xl mx-auto">
-                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">My Profile</h2>
-
-                    {loading ? (
-                        <div className="flex items-center gap-2 text-gray-500">
-                            <FaSpinner className="animate-spin" /> Loading profile...
-                        </div>
-                    ) : profile ? (
-                        <div>
-                            {/* Tên to, đậm, căn giữa */}
-                            <h3 className="text-center text-3xl font-bold text-gray-800 mb-8">
-                                {profile.fullname}
-                            </h3>
-
-                            {/* Bảng 2 cột - giống User List */}
-                            <table className="min-w-full text-sm">
-                                <tbody>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Email</td>
-                                        <td className="px-6 py-4">{profile.email}</td>
-                                    </tr>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Phone</td>
-                                        <td className="px-6 py-4">{profile.phone || "—"}</td>
-                                    </tr>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Role</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs ${profile.role === "ADMIN" ? "bg-purple-100 text-purple-800" :
-                                                profile.role === "STAFF" ? "bg-blue-100 text-blue-800" :
-                                                    profile.role === "TECHNICIAN" ? "bg-green-100 text-green-800" :
-                                                        "bg-gray-100 text-gray-800"
-                                                }`}>
-                                                {profile.role}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Address</td>
-                                        <td className="px-6 py-4">{profile.address || "—"}</td>
-                                    </tr>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Date of Birth</td>
-                                        <td className="px-6 py-4">{profile.dob || "—"}</td>
-                                    </tr>
-                                    <tr className="border-t">
-                                        <td className="px-6 py-4 font-medium text-gray-700">Account Status</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs ${profile.accountLocked ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                                                }`}>
-                                                {profile.accountLocked ? "Locked" : "Active"}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div className="flex justify-center mt-8">
-                                <button
-                                    onClick={() => setEditing(true)}
-                                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                                >
-                                    Edit Profile
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-gray-500 text-center py-8">No profile data available.</p>
-                    )}
-                </div>
-            </main>
-
-            {/* Edit Modal */}
-            {editing && profile && (
-                <EditProfileModal
-                    profile={profile}
-                    token={token}
-                    onClose={() => setEditing(false)}
-                    onUpdated={() => setRefreshKey(k => k + 1)}
-                />
-            )}
+                </form>
+            </div>
         </div>
     );
 }
