@@ -8,6 +8,7 @@ export default function PaymentSuccess() {
 
     const status = searchParams.get("status");
     const paymentId = searchParams.get("paymentId");
+    const method = searchParams.get("method");
 
     useEffect(() => {
         if (status === "success") {
@@ -38,12 +39,29 @@ export default function PaymentSuccess() {
                         Your payment has been processed successfully.
                     </p>
                     <div className="bg-gray-700 rounded-lg p-4 mb-6">
-                        <p className="text-sm text-gray-400 mb-2">Payment ID</p>
-                        <p className="text-xl font-mono font-bold">#{paymentId}</p>
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Payment ID</p>
+                                <p className="text-xl font-mono font-bold">#{paymentId}</p>
+                            </div>
+                            {method && (
+                                <div>
+                                    <p className="text-sm text-gray-400 mb-1">Payment Method</p>
+                                    <p className="text-lg font-semibold">
+                                        {method === 'QR' && '📱 QR Code'}
+                                        {method === 'VNPAY' && '🏦 VNPay'}
+                                        {method === 'CASH' && '💵 Cash'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="bg-green-900/30 border border-green-500 rounded-lg p-4 mb-6">
                         <p className="text-sm">
-                            🎉 Thank you for your payment! Your vehicle is ready for pickup.
+                            🎉 Thank you for your payment! 
+                            {method === 'CASH' 
+                                ? ' Please bring cash when picking up your vehicle.' 
+                                : ' Your vehicle is ready for pickup.'}
                         </p>
                     </div>
                     <p className="text-gray-400 text-sm mb-4">

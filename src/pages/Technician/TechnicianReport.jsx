@@ -7,7 +7,7 @@ export default function TechnicianReport() {
     const { appointmentId } = useParams();
     const navigate = useNavigate();
     const token = localStorage.getItem("token");
-    
+
     // State
     const [details, setDetails] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -17,7 +17,9 @@ export default function TechnicianReport() {
     const [odometer, setOdometer] = useState("");
     const [generating, setGenerating] = useState(false);
     const [appointment, setAppointment] = useState(null);
-    const [reportStatus, setReportStatus] = useState(null); // DRAFT, SENT, APPROVED, REJECTED
+    const [appointmentStatus, setAppointmentStatus] = useState(null);
+    const [reportStatus, setReportStatus] = useState(null);
+    const [customerApproved, setCustomerApproved] = useState(null); // true / false / null
     const [sending, setSending] = useState(false);
     const [quotation, setQuotation] = useState(null);
     const [customerFeedback, setCustomerFeedback] = useState(null);
@@ -31,14 +33,9 @@ export default function TechnicianReport() {
             );
             const appt = res.data.find(a => a.appointmentId === parseInt(appointmentId));
             setAppointment(appt);
-            
-            // Check if rejected (has customer feedback)
-            if (appt && appt.customerFeedback) {
-                setCustomerFeedback(appt.customerFeedback);
-                setReportStatus('REJECTED'); // UI status for display
-            }
+            setAppointmentStatus(appt?.status || null); // ← Lấy từ DB
         } catch (err) {
-            console.error("❌ Failed to fetch appointment:", err);
+            console.error("Failed to fetch appointment:", err);
         }
     };
 
@@ -63,7 +60,7 @@ export default function TechnicianReport() {
             );
             console.log("✅ Fetched report details:", res.data);
             setDetails(res.data || []);
-            
+
             // Determine report status based on details
             if (res.data && res.data.length > 0) {
                 setReportStatus("DRAFT"); // Has details but not sent
@@ -71,7 +68,7 @@ export default function TechnicianReport() {
         } catch (err) {
             // If appointment has no report yet, that's okay - it will be created when generating
             if (err.response?.status === 500 || err.message?.includes("No report found")) {
-                console.log("⚠️ Appointment has no report yet - will be created when generating");
+console.log("⚠️ Appointment has no report yet - will be created when generating");
                 setDetails([]);
             } else {
                 console.error("❌ Failed to fetch report details:", err);
@@ -91,12 +88,17 @@ export default function TechnicianReport() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setQuotation(res.data);
-            
+
             // Update status based on quotation
             if (res.data?.customerApproved === true) {
-                setReportStatus("APPROVED");
+                setReportStatus("COMPLETED");
+                setCustomerFeedback(null); // Clear feedback when approved
             } else if (res.data?.customerApproved === false) {
                 setReportStatus("REJECTED");
+                // Fetch customer feedback/rejection reason
+                if (res.data?.customerFeedback) {
+                    setCustomerFeedback(res.data.customerFeedback);
+                }
             } else if (res.data) {
                 setReportStatus("SENT");
             }
@@ -156,13 +158,13 @@ export default function TechnicianReport() {
         }
 
         if (!selectedPlan.items || selectedPlan.items.length === 0) {
-            alert("Selected plan has no maintenance items");
+alert("Selected plan has no maintenance items");
             return;
         }
 
         setGenerating(true);
         try {
-            const url = `${API_BASE_URL}/technician/${appointmentId}/details/by-km`;
+            const url = `${API_BASE_URL}/technician/appointment/${appointmentId}/details/by-km`;
             console.log(`🔧 Generating report from plan ${selectedPlan.id} (${selectedPlan.intervalKm}km)`);
             console.log(`📍 API URL:`, url);
             console.log(`📤 Sending payload:`, {
@@ -170,11 +172,11 @@ export default function TechnicianReport() {
             });
             console.log(`🔑 Token available:`, token ? 'Yes' : 'No');
             console.log(`📋 AppointmentId:`, appointmentId);
-            
+
             // Call backend API to generate report details based on plan
             const res = await axios.post(
                 url,
-                { 
+                {
                     currentKm: parseInt(odometer)
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
@@ -183,17 +185,21 @@ export default function TechnicianReport() {
             console.log("✅ Report generated successfully:", res.data);
             const items = res.data?.items || res.data || [];
             const itemCount = items.length;
-            
+
             // Show success message first
             alert(`✅ Generated ${itemCount} maintenance tasks from ${selectedPlan.intervalKm}km plan!`);
-            
+
             // Refresh the list to display the new details
             await fetchDetails();
         } catch (err) {
             console.error("❌ Failed to generate report:", err);
-            console.error("❌ Error response:", err.response?.data);
+            console.error("❌ Full error object:", JSON.stringify(err, null, 2));
+            console.error("❌ Error response:", err.response);
+            console.error("❌ Error response data:", err.response?.data);
             console.error("❌ Error status:", err.response?.status);
-            
+            console.error("❌ Error message:", err.message);
+            console.error("❌ Error code:", err.code);
+
             // Check if it's just a fetch error after successful generation
             if (err.message === "Network Error" || err.code === "ERR_NETWORK") {
                 console.log("⚠️ Network error, but checking if report was created...");
@@ -207,12 +213,17 @@ export default function TechnicianReport() {
                     console.error("❌ Also failed to fetch details:", fetchErr);
                 }
             }
+
+            let errorMsg = "Unknown error";
+            if (err.response?.data?.message) {
+                errorMsg = err.response.data.message;
+            } else if (typeof err.response?.data === 'string') {
+                errorMsg = err.response.data;
+            } else if (err.message) {
+                errorMsg = err.message;
+            }
             
-            const errorMsg = err.response?.data?.message 
-                || err.response?.data 
-                || err.message 
-                || "Unknown error";
-            alert("Failed to generate report: " + errorMsg);
+            alert("Failed to generate report: " + errorMsg + "\n\nCheck console for details (F12)");
         } finally {
             setGenerating(false);
         }
@@ -228,7 +239,7 @@ export default function TechnicianReport() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             fetchDetails();
-            alert("Detail updated successfully!");
+alert("Detail updated successfully!");
         } catch (err) {
             console.error("❌ Failed to update detail:", err);
             alert("Failed to update detail!");
@@ -255,10 +266,11 @@ export default function TechnicianReport() {
         setSending(true);
         try {
             await axios.post(
-                `${API_BASE_URL}/technician/${appointmentId}/send-report`,
-                {},
+                `${API_BASE_URL}/technician/appointment/${appointmentId}/send-report`,
+                { status: "PENDING" },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+
 
             alert("✅ Report sent to customer successfully!\n\nWaiting for customer approval...");
             setReportStatus("SENT");
@@ -284,26 +296,48 @@ export default function TechnicianReport() {
                                 <div className="mt-2">
                                     {reportStatus === "DRAFT" && (
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-800">
-                                            📝 Draft - Not Sent
+                                            📝 DRAFT - Report Being Prepared
                                         </span>
                                     )}
+
+                                    {reportStatus === "IN_PROGRESS" && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-800">
+                                            🛠 IN PROGRESS - Report Being Prepared
+                                        </span>
+                                    )}
+
                                     {reportStatus === "SENT" && (
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                            📤 Sent - Waiting for Customer Approval
+                                            📤 SENT - Waiting for Customer Approval
                                         </span>
                                     )}
-                                    {reportStatus === "APPROVED" && (
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                            ✅ Approved by Customer
+
+                                    {reportStatus === "PENDING" && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                            ⏳ PENDING - Waiting for Customer Approval
                                         </span>
                                     )}
+
                                     {reportStatus === "REJECTED" && (
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                            ❌ Rejected by Customer - Needs Revision
+                                            ❌ REJECTED - Customer Rejected Report
+                                        </span>
+                                    )}
+
+                                    {reportStatus === "COMPLETED" && (
+ <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                            ✅ COMPLETED - Customer Approved
+                                        </span>
+                                    )}
+
+                                    {reportStatus === "PAID" && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                                            🎉 DONE - Service Finalized
                                         </span>
                                     )}
                                 </div>
                             )}
+
                         </div>
                         <button
                             onClick={() => navigate(-1)}
@@ -343,19 +377,19 @@ export default function TechnicianReport() {
                                     </p>
                                 </div>
                                 <p className="text-sm text-red-700 mt-3">
-                                    Please review the feedback and revise the report accordingly. 
-                                    After editing, send the updated report to the customer again.
+                                    Please review the feedback and revise the report accordingly.
+After editing, send the updated report to the customer again.
                                 </p>
                             </div>
                         </div>
                     </div>
                 )}
-                
+
 
                 {/* Odometer Input & Plan Selection */}
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     <h2 className="text-xl font-semibold mb-4 text-gray-800">🚗 Vehicle Odometer & Maintenance Plan</h2>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         {/* Odometer Input */}
                         <div>
@@ -400,11 +434,10 @@ export default function TechnicianReport() {
                             <button
                                 onClick={handleGenerateFromPlan}
                                 disabled={!selectedPlan || generating}
-                                className={`w-full px-6 py-2 rounded-lg font-semibold ${
-                                    selectedPlan && !generating
-                                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
+className={`w-full px-6 py-2 rounded-lg font-semibold ${selectedPlan && !generating
+                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
                             >
                                 {generating ? '⏳ Generating...' : '✨ Generate Report'}
                             </button>
@@ -420,7 +453,7 @@ export default function TechnicianReport() {
                             <p className="text-sm text-blue-700 mb-3">
                                 This plan includes {selectedPlan.items?.length || 0} maintenance tasks. Review below and click "Generate Report" to add them to the report.
                             </p>
-                            
+
                             {/* Plan Items Table Preview */}
                             <div className="bg-white rounded-lg overflow-hidden border border-blue-200 mt-3">
                                 <table className="min-w-full text-sm">
@@ -447,7 +480,7 @@ export default function TechnicianReport() {
                 </div>
 
                 {/* Report Details Table */}
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+<div className="bg-white rounded-lg shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                             <div>
@@ -456,16 +489,15 @@ export default function TechnicianReport() {
                                     Review and edit maintenance tasks below
                                 </p>
                             </div>
-                            {/* Send to Customer Button */}
-                            {details.length > 0 && reportStatus !== "SENT" && reportStatus !== "APPROVED" && (
+                            {/* Send to Customer Button - Works for both new and resubmit */}
+                            {details.length > 0 && reportStatus !== "SENT" && reportStatus !== "COMPLETED" && reportStatus !== "APPROVED" && (
                                 <button
                                     onClick={handleSendToCustomer}
                                     disabled={sending}
-                                    className={`px-6 py-2 rounded-lg font-semibold ${
-                                        sending
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                    }`}
+                                    className={`px-6 py-2 rounded-lg font-semibold ${sending
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        }`}
                                 >
                                     {sending ? '📤 Sending...' : '📤 Send to Customer'}
                                 </button>
@@ -493,7 +525,7 @@ export default function TechnicianReport() {
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Name</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part ID</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Condition</th>
@@ -525,7 +557,7 @@ export default function TechnicianReport() {
                                             {details.reduce((sum, d) => sum + (d.partCost || 0), 0).toLocaleString()} VND
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                            {details.reduce((sum, d) => sum + (d.laborCost || 0), 0).toLocaleString()} VND
+{details.reduce((sum, d) => sum + (d.laborCost || 0), 0).toLocaleString()} VND
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-lg font-bold text-green-600">
                                             {details.reduce((sum, d) => sum + (d.totalCost || 0), 0).toLocaleString()} VND
@@ -598,7 +630,7 @@ function DetailRow({ detail, index, updating, onUpdate }) {
                         value={formData.partId}
                         onChange={(e) => handleChange('partId', e.target.value)}
                         className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    />
+/>
                 ) : (
                     <span className="text-sm text-gray-900">{detail.partId || "-"}</span>
                 )}
@@ -660,7 +692,7 @@ function DetailRow({ detail, index, updating, onUpdate }) {
             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
                 {subtotal.toLocaleString()} VND
             </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm">
+<td className="px-6 py-4 whitespace-nowrap text-sm">
                 {editing ? (
                     <div className="flex gap-2">
                         <button

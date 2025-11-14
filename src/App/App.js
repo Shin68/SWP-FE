@@ -15,11 +15,11 @@ import StaffProfile from "../pages/Staff/StaffProfile";
 import TechnicianDashboard from "../pages/Technician/TechnicianDashboard";
 import TechnicianReport from "../pages/Technician/TechnicianReport";
 import BookingList from "../pages/Booking/BookingList";
-import QuotationApproval from "../pages/Customer/QuotationApproval";
 import ReportViewer from "../pages/Customer/ReportViewer";
 import Payment from "../pages/Customer/Payment";
 import PaymentSuccess from "../pages/Customer/PaymentSuccess";
 import PaymentReturn from "../pages/Customer/PaymentReturn";
+import AddVehicle from "../pages/Vehicle/AddVehicle";
 import { PAGE_URLS } from "./config";
 
 function App() {
@@ -42,11 +42,11 @@ function App() {
         <Route path={PAGE_URLS.TECHNICIAN_DASHBOARD} element={<TechnicianDashboard />} />
         <Route path={PAGE_URLS.TECHNICIAN_REPORT + "/:appointmentId"} element={<TechnicianReport />} />
         <Route path={PAGE_URLS.BOOKING_LIST} element={<BookingList />} />
-        <Route path={PAGE_URLS.QUOTATION_APPROVAL + "/:appointmentId"} element={<QuotationApproval />} />
         <Route path={PAGE_URLS.REPORT_VIEWER + "/:appointmentId"} element={<ReportViewer />} />
         <Route path={PAGE_URLS.PAYMENT + "/:appointmentId"} element={<Payment />} />
         <Route path={PAGE_URLS.PAYMENT_SUCCESS} element={<PaymentSuccess />} />
         <Route path={PAGE_URLS.PAYMENT_RETURN} element={<PaymentReturn />} />
+        <Route path={PAGE_URLS.ADD_VEHICLE} element={<AddVehicle />} />
 
       </Routes>
     </Router>

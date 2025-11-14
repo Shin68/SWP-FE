@@ -1,6 +1,14 @@
 // API Configuration
 export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8081/api';
 
+// Axios default configuration
+export const axiosConfig = {
+  timeout: 10000, // 10 seconds
+  headers: {
+    'Content-Type': 'application/json',
+  }
+};
+
 // Page URLs
 export const PAGE_URLS = {
   HOME: '/home',
@@ -24,6 +32,7 @@ export const PAGE_URLS = {
   PAYMENT: "/payment",
   PAYMENT_SUCCESS: "/payment-success",
   PAYMENT_RETURN: "/payment-return",
+  ADD_VEHICLE: "/add-vehicle",
 };
 
 // Other configs can be added here

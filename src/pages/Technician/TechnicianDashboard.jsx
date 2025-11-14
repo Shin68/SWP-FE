@@ -55,7 +55,7 @@ export default function TechnicianDashboard() {
 
                     if (!technicianAssigned || technicianAssigned.toLowerCase() === "none") continue;
                     
-                    // Skip completed and paid appointments
+                    // Skip completed and paid appointments (but keep REJECTED for notifications)
                     if (status === "COMPLETED" || status === "PAID") continue;
 
                     let vehicleName = "---";
@@ -71,6 +71,22 @@ export default function TechnicianDashboard() {
                         branchName = cRes.data?.name || "---";
                     } catch { }
 
+                    // Fetch rejection reason if status is REJECTED
+                    let rejectionReason = null;
+                    if (status === "REJECTED") {
+                        try {
+                            // Try to get quotation details which may contain rejection reason
+                            const quotRes = await axios.get(
+                                `${API_BASE_URL}/customer/totalcost/${appointmentId}`,
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            rejectionReason = quotRes.data?.customerFeedback || "Customer rejected the quotation";
+                        } catch (err) {
+                            console.log(`No rejection reason found for appointment ${appointmentId}`);
+                            rejectionReason = "Customer rejected the quotation";
+                        }
+                    }
+
                     enriched.push({ 
                         appointmentId, 
                         vehicleName, 
@@ -79,17 +95,18 @@ export default function TechnicianDashboard() {
                         status, 
                         appointmentDate, 
                         appointmentTime,
-                        customerFeedback // Include in enriched data
+                        customerFeedback, // Include in enriched data
+                        rejectionReason  // Add rejection reason
                     });
                 }
 
                 setAppointments(enriched);
                 
                 // Debug: Check for rejected reports
-                const rejectedCount = enriched.filter(a => a.customerFeedback).length;
+                const rejectedCount = enriched.filter(a => a.status === "REJECTED").length;
                 console.log(`📊 Total appointments: ${enriched.length}, Rejected: ${rejectedCount}`);
                 if (rejectedCount > 0) {
-                    console.log("🚨 Rejected appointments:", enriched.filter(a => a.customerFeedback));
+                    console.log("🚨 Rejected appointments:", enriched.filter(a => a.status === "REJECTED"));
                 }
             } catch (err) {
                 if (axios.isCancel(err)) {
@@ -194,9 +211,9 @@ export default function TechnicianDashboard() {
                         className={`w-full text-left px-3 py-3 rounded flex items-center gap-3 mt-2 relative ${activeTab === "notifications" ? "bg-gray-800 text-white" : "hover:bg-gray-800 text-gray-300"}`}
                     >
                         <FaBell /> Notifications
-                        {appointments.filter(a => a.customerFeedback).length > 0 && (
+                        {appointments.filter(a => a.status === "REJECTED").length > 0 && (
                             <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                {appointments.filter(a => a.customerFeedback).length}
+                                {appointments.filter(a => a.status === "REJECTED").length}
                             </span>
                         )}
                     </button>
@@ -224,9 +241,9 @@ export default function TechnicianDashboard() {
                                 {/* Notification Bell */}
                                 <div className="relative">
                                     <span className="text-3xl cursor-pointer" title="Rejected Reports">🔔</span>
-                                    {appointments.filter(a => a.customerFeedback).length > 0 && (
+                                    {appointments.filter(a => a.status === "REJECTED").length > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
-                                            {appointments.filter(a => a.customerFeedback).length}
+                                            {appointments.filter(a => a.status === "REJECTED").length}
                                         </span>
                                     )}
                                 </div>
@@ -262,11 +279,12 @@ export default function TechnicianDashboard() {
                                                 <div className="text-xs text-gray-500">{a.appointmentTime}</div>
                                             </td>
                                             <td className="px-4 py-3">{a.technicianAssigned}</td>
-                                            <td className="px-4 py-3">
+                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded text-xs ${
                                                     a.status === "IN_PROGRESS" ? "bg-yellow-100 text-yellow-800" : 
                                                     a.status === "APPROVED" ? "bg-green-100 text-green-800" :
                                                     a.status === "ASSIGNED" ? "bg-blue-100 text-blue-800" : 
+                                                    a.status === "REJECTED" ? "bg-red-100 text-red-800" :
                                                     a.status === "PAYMENT_PENDING" ? "bg-purple-100 text-purple-800" :
                                                     "bg-gray-100 text-gray-800"
                                                 }`}>{a.status}</span>
@@ -285,7 +303,7 @@ export default function TechnicianDashboard() {
                                                         <FaPlay /> Start
                                                     </button>
                                                 )}
-                                                {a.status === "IN_PROGRESS" && (
+                                                {a.status === "IN_PROGRESS" && a.status !== "REJECTED" && (
                                                     <button 
                                                         onClick={() => handleFinishMaintenance(a.appointmentId)} 
                                                         disabled={finishingId === a.appointmentId} 
@@ -313,7 +331,7 @@ export default function TechnicianDashboard() {
                         <header className="flex items-center justify-between mb-6">
                             <h1 className="text-2xl font-semibold text-gray-800">🔔 Customer Notifications</h1>
                             <div className="text-sm text-gray-600">
-                                {appointments.filter(a => a.customerFeedback).length} pending feedback(s)
+                                {appointments.filter(a => a.status === "REJECTED").length} pending feedback(s)
                             </div>
                         </header>
 
@@ -322,15 +340,15 @@ export default function TechnicianDashboard() {
                                 <FaSpinner className="animate-spin inline-block text-3xl text-gray-400" />
                                 <p className="mt-4 text-gray-600">Loading notifications...</p>
                             </div>
-                        ) : appointments.filter(a => a.customerFeedback).length === 0 ? (
+                        ) : appointments.filter(a => a.status === "REJECTED").length === 0 ? (
                             <div className="bg-white shadow rounded p-12 text-center">
                                 <div className="text-6xl mb-4">✅</div>
                                 <h3 className="text-xl font-semibold text-gray-800 mb-2">All Clear!</h3>
-                                <p className="text-gray-600">No customer feedback pending at the moment.</p>
+                                <p className="text-gray-600">No rejected quotations at the moment.</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {appointments.filter(a => a.customerFeedback).map(a => (
+                                {appointments.filter(a => a.status === "REJECTED").map(a => (
                                     <div key={a.appointmentId} className="bg-white shadow rounded-lg overflow-hidden border-l-4 border-red-500">
                                         <div className="p-6">
                                             <div className="flex items-start justify-between mb-4">
@@ -352,16 +370,16 @@ export default function TechnicianDashboard() {
                                                 </div>
                                             </div>
 
-                                            {/* Customer Feedback */}
+                                            {/* Rejection Reason */}
                                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                                                 <div className="flex items-start gap-2">
                                                     <span className="text-2xl">💬</span>
                                                     <div className="flex-1">
                                                         <p className="text-sm font-semibold text-yellow-800 mb-2">
-                                                            Customer's Feedback:
+                                                            Rejection Reason:
                                                         </p>
                                                         <p className="text-gray-800 italic">
-                                                            "{a.customerFeedback}"
+                                                            "{a.rejectionReason || "No reason provided"}"
                                                         </p>
                                                     </div>
                                                 </div>

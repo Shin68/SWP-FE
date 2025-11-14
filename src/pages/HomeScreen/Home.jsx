@@ -13,14 +13,15 @@ export default function Home() {
   const [dealerLoading, setDealerLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
-  const [pendingQuotations, setPendingQuotations] = useState([]);
-  const [quotationsLoading, setQuotationsLoading] = useState(true);
   const [pendingReports, setPendingReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -95,64 +96,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const fetchPendingQuotations = async () => {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      const token = localStorage.getItem("token");
-
-      if (!storedUser || !token) {
-        setQuotationsLoading(false);
-        return;
-      }
-
-      try {
-        console.log(`Fetching quotations for user ${storedUser.id}`);
-        // Get all appointments first
-        const appointmentsRes = await axios.get(
-          `${API_BASE_URL}/customer/${storedUser.id}/appointments`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        // For each appointment, check if there's a pending quotation
-        const quotationsPromises = (appointmentsRes.data || []).map(async (appointment) => {
-          try {
-            const quotRes = await axios.get(
-              `${API_BASE_URL}/customer/totalcost/${appointment.id}`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            
-            // Only return if quotation exists and is pending (customerApproved === null)
-            if (quotRes.data && quotRes.data.customerApproved === null) {
-              return {
-                appointmentId: appointment.id,
-                appointmentDate: appointment.appointmentDate,
-                appointmentTime: appointment.appointmentTime,
-                totalCost: quotRes.data.totalCost,
-                itemCount: quotRes.data.reportDetails?.length || 0
-              };
-            }
-            return null;
-          } catch (err) {
-            // No quotation for this appointment
-            return null;
-          }
-        });
-
-        const results = await Promise.all(quotationsPromises);
-        const pending = results.filter(q => q !== null);
-        setPendingQuotations(pending);
-        console.log("Pending quotations:", pending);
-      } catch (err) {
-        console.error("Failed to fetch quotations:", err);
-        setPendingQuotations([]);
-      } finally {
-        setQuotationsLoading(false);
-      }
-    };
-
-    fetchPendingQuotations();
-  }, []);
-
-  useEffect(() => {
     const fetchPendingReports = async () => {
       const storedUser = JSON.parse(localStorage.getItem("user"));
       const token = localStorage.getItem("token");
@@ -191,8 +134,8 @@ export default function Home() {
             appointmentDate: appointment.appointmentDate,
             appointmentTime: appointment.appointmentTime,
             technicianAssigned: appointment.technicianAssigned,
-            totalCost: quotationData?.totalCost || 0,
-            itemCount: quotationData?.reportDetails?.length || 0,
+            totalCost: quotationData?.grandTotal || 0,
+            itemCount: quotationData?.items?.length || 0,
             status: appointment.status
           });
         }
@@ -207,7 +150,16 @@ export default function Home() {
       }
     };
 
+    // Fetch immediately on mount
     fetchPendingReports();
+    
+    // Then poll every 10 seconds for updates
+    const intervalId = setInterval(() => {
+      fetchPendingReports();
+    }, 10000); // 10 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -242,7 +194,58 @@ export default function Home() {
       }
     };
 
+    // Fetch immediately on mount
     fetchPendingPayments();
+    
+    // Then poll every 10 seconds for updates
+    const intervalId = setInterval(() => {
+      fetchPendingPayments();
+    }, 10000); // 10 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setNotificationsLoading(false);
+        return;
+      }
+
+      try {
+        console.log(`Fetching notifications for user ${storedUser.id}`);
+        const res = await axios.get(
+          `${API_BASE_URL}/notifications/user/${storedUser.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setNotifications(res.data.notifications || []);
+        setUnreadCount(res.data.unreadCount || 0);
+        console.log("Notifications:", res.data.notifications);
+        console.log("Unread count:", res.data.unreadCount);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+        setNotifications([]);
+        setUnreadCount(0);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    // Fetch immediately on mount
+    fetchNotifications();
+    
+    // Then poll every 10 seconds for updates
+    const intervalId = setInterval(() => {
+      fetchNotifications();
+    }, 10000); // 10 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleCancelAppointment = async (appointmentId) => {
@@ -314,9 +317,9 @@ export default function Home() {
           <div className="relative">
             <button onClick={() => setShowNotificationModal(!showNotificationModal)}>
               <span className="text-2xl cursor-pointer">🔔</span>
-              {(pendingReports.length + pendingPayments.length + pendingQuotations.length) > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                  {pendingReports.length + pendingPayments.length + pendingQuotations.length}
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -393,12 +396,12 @@ export default function Home() {
         ) : (
           <div className="text-center text-gray-400 py-4">No vehicles registered</div>
         )}
-        {/* <button
-          onClick={() => navigate("/vehicle-list")}
-          className="mt-3 w-full bg-gray-800 hover:bg-gray-900 text-sm py-2 rounded"
+        <button
+          onClick={() => navigate("/add-vehicle")}
+          className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-sm py-2 rounded font-semibold"
         >
           + Add My Vehicle
-        </button> */}
+        </button>
       </section>
 
       {/* Bookings Section */}
@@ -568,50 +571,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Pending Quotations Section */}
-      {pendingQuotations.length > 0 && (
-        <section className="bg-orange-600 mx-4 mt-4 rounded-lg p-4 border-2 border-yellow-400">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">⚠️</span>
-            <h3 className="text-lg font-semibold">Pending Quotations - Action Required!</h3>
-          </div>
-          {quotationsLoading ? (
-            <div className="text-center text-white py-4">Loading quotations...</div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {pendingQuotations.map((quotation) => (
-                <div key={quotation.appointmentId} className="bg-white text-gray-900 rounded-md p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="font-semibold text-lg">
-                        Appointment #{quotation.appointmentId}
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        📅 {quotation.appointmentDate} at {quotation.appointmentTime}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        📋 {quotation.itemCount} maintenance tasks
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500">Total Cost</div>
-                      <div className="text-xl font-bold text-blue-600">
-                        {(quotation.totalCost || 0).toLocaleString()} VND
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => navigate(`/quotation/${quotation.appointmentId}`)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition"
-                  >
-                    📝 Review & Approve Quotation
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+     
 
       {/* Dealer Section */}
       <section className="bg-gray-600 mx-4 mt-4 rounded-lg p-4 mb-6">
@@ -663,9 +623,9 @@ export default function Home() {
             <div className="sticky top-0 bg-gray-800 border-b border-gray-600 p-4 flex justify-between items-center">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 🔔 Notifications
-                {(pendingReports.length + pendingPayments.length + pendingQuotations.length) > 0 && (
+                {unreadCount > 0 && (
                   <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">
-                    {pendingReports.length + pendingPayments.length + pendingQuotations.length}
+                    {unreadCount}
                   </span>
                 )}
               </h3>
@@ -678,79 +638,80 @@ export default function Home() {
             </div>
 
             <div className="p-4 space-y-3">
-              {/* Pending Payments Notifications */}
-              {pendingPayments.map((payment) => (
-                <div 
-                  key={`payment-${payment.id}`}
-                  className="bg-red-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-red-600 transition"
-                  onClick={() => {
-                    setShowNotificationModal(false);
-                    navigate(`/payment/${payment.id}`);
-                  }}
-                >
-                  <div className="flex items-start gap-2 mb-2">
-                    <span className="text-2xl">💰</span>
-                    <div className="flex-1">
-                      <div className="font-semibold text-white">Payment Required</div>
-                      <div className="text-xs text-gray-200 mt-1">
-                        Appointment #{payment.id}
-                      </div>
-                      <div className="text-xs text-gray-300 mt-1">
-                        📅 {payment.appointmentDate} at {payment.appointmentTime}
-                      </div>
-                      <div className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded inline-block mt-2">
-                        ✅ Maintenance Completed
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-yellow-200 mt-2">
-                    Click to proceed with payment →
-                  </div>
+              {/* Loading State */}
+              {notificationsLoading ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-2xl mb-2">⏳</div>
+                  <div className="text-sm">Loading notifications...</div>
                 </div>
-              ))}
-
-              {/* Pending Reports Notifications */}
-              {pendingReports.map((report) => (
-                <div 
-                  key={`report-${report.id}`}
-                  className="bg-blue-700 rounded-lg p-3 border-l-4 border-yellow-400 cursor-pointer hover:bg-blue-600 transition"
-                  onClick={() => {
-                    setShowNotificationModal(false);
-                    navigate(`/report-viewer/${report.id}`);
-                  }}
-                >
-                  <div className="flex items-start gap-2 mb-2">
-                    <span className="text-2xl">📋</span>
-                    <div className="flex-1">
-                      <div className="font-semibold text-white">Service Report Ready</div>
-                      <div className="text-xs text-gray-200 mt-1">
-                        Appointment #{report.id}
-                      </div>
-                      <div className="text-xs text-gray-300 mt-1">
-                        📅 {report.appointmentDate} at {report.appointmentTime}
-                      </div>
-                      <div className="text-xs text-gray-300">
-                        👨‍🔧 {report.technicianAssigned}
-                      </div>
-                      {report.totalCost > 0 && (
-                        <div className="text-xs text-yellow-200 mt-1">
-                          💰 {report.totalCost.toLocaleString()} VND
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-xs text-yellow-200 mt-2">
-                    Click to view PDF report & approve/reject →
-                  </div>
-                </div>
-              ))}
-
-              {/* No Notifications */}
-              {pendingPayments.length === 0 && pendingReports.length === 0 && pendingQuotations.length === 0 && (
+              ) : notifications.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <div className="text-4xl mb-2">✅</div>
-                  <div className="text-sm">No pending notifications</div>
+                  <div className="text-sm">No notifications</div>
                 </div>
+              ) : (
+                notifications.map((notification) => {
+                  // Determine notification style based on type
+                  let bgColor = 'bg-gray-700';
+                  let borderColor = 'border-gray-500';
+                  let hoverColor = 'hover:bg-gray-600';
+                  
+                  if (notification.type === 'PAYMENT_REQUESTED') {
+                    bgColor = 'bg-red-700';
+                    borderColor = 'border-yellow-400';
+                    hoverColor = 'hover:bg-red-600';
+                  } else if (notification.type === 'QUOTATION_READY' || notification.type === 'REPORT_SENT' || notification.type === 'REPORT_READY') {
+                    // All report/quotation notifications use blue color
+                    bgColor = 'bg-blue-600';
+                    borderColor = 'border-yellow-400';
+                    hoverColor = 'hover:bg-blue-700';
+                  }
+                  
+                  // Add read state styling
+                  if (notification.isRead) {
+                    bgColor = 'bg-gray-700';
+                    borderColor = 'border-gray-600';
+                  }
+                  
+                  return (
+                    <div 
+                      key={notification.id}
+                      className={`${bgColor} ${!notification.isRead ? borderColor : 'border-gray-600'} rounded-lg p-3 border-l-4 cursor-pointer ${hoverColor} transition`}
+                      onClick={() => {
+                        setShowNotificationModal(false);
+                        // Navigate based on notification type
+                        if (notification.type === 'PAYMENT_REQUESTED' && notification.appointmentId) {
+                          navigate(`/payment/${notification.appointmentId}`);
+                        } else if (notification.appointmentId) {
+                          // All report/quotation notifications go to report-viewer
+                          navigate(`/report-viewer/${notification.appointmentId}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className={`font-semibold text-white flex items-center gap-2`}>
+                            {notification.title}
+                            {!notification.isRead && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">NEW</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-200 mt-2 whitespace-pre-line">
+                            {notification.message}
+                          </div>
+                          {notification.appointmentId && (
+                            <div className="text-xs text-gray-300 mt-2">
+                              📋 Appointment #{notification.appointmentId}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-2">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

@@ -44,6 +44,11 @@ export default function StaffDashboard() {
             status, appointmentDate, appointmentTime, technicianAssigned
           } = item;
 
+          // Skip appointments that are PAID or COMPLETED
+          if (status === 'PAID' || status === 'COMPLETED') {
+            continue;
+          }
+
           let customerName = "---", customerPhone = "---";
           let vehicleName = "---", branchName = "---";
 

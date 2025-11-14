@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaHome } from "react-icons/fa";
-import { API_BASE_URL } from "../../App/config";
+import { API_BASE_URL, axiosConfig } from "../../App/config";
 
 export default function VehicleDetail() {
   const { state } = useLocation();
@@ -13,6 +13,7 @@ export default function VehicleDetail() {
   const [maintenanceInfo, setMaintenanceInfo] = useState(null);
   const [serviceHistory, setServiceHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const token = localStorage.getItem("token");
 
@@ -24,21 +25,39 @@ export default function VehicleDetail() {
         // Fetch vehicle details
         const vehicleRes = await axios.get(
           `${API_BASE_URL}/customer/vehicle/details/${vehicleId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            ...axiosConfig,
+            headers: { 
+              ...axiosConfig.headers,
+              Authorization: `Bearer ${token}` 
+            }
+          }
         );
         setVehicle(vehicleRes.data);
 
         // Fetch maintenance/reminder info
         const maintenanceRes = await axios.get(
           `${API_BASE_URL}/customer/vehicle/${vehicleId}/maintenance`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            ...axiosConfig,
+            headers: { 
+              ...axiosConfig.headers,
+              Authorization: `Bearer ${token}` 
+            }
+          }
         );
         setMaintenanceInfo(maintenanceRes.data);
 
         // Fetch service history
         const historyRes = await axios.get(
           `${API_BASE_URL}/customer/vehicle/${vehicleId}/service-history`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            ...axiosConfig,
+            headers: { 
+              ...axiosConfig.headers,
+              Authorization: `Bearer ${token}` 
+            }
+          }
         );
         if (historyRes.data.success) {
           setServiceHistory(historyRes.data.serviceHistory || []);
@@ -46,6 +65,20 @@ export default function VehicleDetail() {
 
       } catch (err) {
         console.error("Error fetching data:", err);
+        setError(err.message || "Failed to load vehicle details");
+        
+        if (err.code === 'ECONNABORTED') {
+          console.error("Request was aborted or timed out");
+          setError("Request timed out. Please check your connection and try again.");
+        } else if (err.response?.status === 401) {
+          console.error("Unauthorized - redirecting to login");
+          setError("Session expired. Please login again.");
+          localStorage.removeItem("token");
+          navigate("/login");
+        } else if (err.response?.status >= 500) {
+          console.error("Server error - please try again later");
+          setError("Server error. Please try again later.");
+        }
       } finally {
         setLoading(false);
       }
@@ -63,6 +96,23 @@ export default function VehicleDetail() {
   if (!vehicle) return (
     <div className="min-h-screen bg-gray-700 text-white flex items-center justify-center">
       <div className="text-xl">Vehicle not found</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen bg-gray-700 text-white flex items-center justify-center">
+      <div className="text-center p-8">
+        <div className="text-xl text-red-400 mb-4">⚠️ Error</div>
+        <div className="text-white bg-gray-800 rounded-lg p-6 max-w-md">
+          <p className="text-lg mb-2">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     </div>
   );
 

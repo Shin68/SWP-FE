@@ -182,10 +182,10 @@ export default function BookingList() {
                             <div className="flex flex-col gap-2">
                                 {b.status === "QUOTATION_SENT" && (
                                     <button
-                                        onClick={() => navigate(`/quotation-approval/${b.id}`)}
-                                        className="bg-yellow-600 hover:bg-yellow-700 px-3 py-2 rounded text-sm font-semibold"
+                                        onClick={() => navigate(`/report-viewer/${b.id}`)}
+                                        className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-semibold"
                                     >
-                                        📋 View Quotation
+                                        📋 View Report & Approve/Reject
                                     </button>
                                 )}
                                 {b.status === "PAYMENT_PENDING" && (

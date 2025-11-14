@@ -10,6 +10,8 @@ export default function Payment() {
     const [loading, setLoading] = useState(true);
     const [paymentMethod, setPaymentMethod] = useState("VNPAY");
     const [processing, setProcessing] = useState(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState(null);
+    const [showQrModal, setShowQrModal] = useState(false);
 
     const token = localStorage.getItem("token");
 
@@ -69,6 +71,20 @@ export default function Payment() {
                     // Redirect to VNPay
                     window.location.href = res.data.vnpUrl;
                 }
+            } else if (paymentMethod === "QR") {
+                // QR payment - generate QR code
+                const res = await axios.post(
+                    `${API_BASE_URL}/payment/${paymentInfo.paymentId}?paymentMethod=QR`,
+                    {},
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                console.log("QR response:", res.data);
+
+                if (res.data.qrUrl) {
+                    setQrCodeUrl(res.data.qrUrl);
+                    setShowQrModal(true);
+                }
             } else if (paymentMethod === "CASH") {
                 // Cash payment - just confirm
                 if (!window.confirm("Please confirm you will pay in cash when picking up your vehicle.")) {
@@ -82,8 +98,8 @@ export default function Payment() {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
 
-                alert("Payment method confirmed! Please bring cash when picking up your vehicle.");
-                navigate("/home");
+                // Navigate to PaymentSuccess with cash payment info
+                navigate(`/payment-success?status=success&paymentId=${paymentInfo.paymentId}&method=CASH`);
             }
         } catch (err) {
             console.error("Error processing payment:", err);
@@ -274,7 +290,34 @@ export default function Payment() {
                         )}
 
                         {/* Show payment interface even if amount is 0 */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            {/* QR Code Option */}
+                            <div
+                                onClick={() => setPaymentMethod("QR")}
+                                className={`cursor-pointer border-2 rounded-lg p-4 transition ${
+                                    paymentMethod === "QR"
+                                        ? "border-purple-500 bg-purple-900/30"
+                                        : "border-gray-600 hover:border-gray-500"
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value="QR"
+                                        checked={paymentMethod === "QR"}
+                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                        className="w-5 h-5"
+                                    />
+                                    <div>
+                                        <div className="font-semibold text-lg">📱 QR Code</div>
+                                        <div className="text-sm text-gray-400">
+                                            Scan QR to pay via banking app
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* VNPay Option */}
                             <div
                                 onClick={() => setPaymentMethod("VNPAY")}
@@ -294,7 +337,7 @@ export default function Payment() {
                                         className="w-5 h-5"
                                     />
                                     <div>
-                                        <div className="font-semibold text-lg">VNPay</div>
+                                        <div className="font-semibold text-lg">🏦 VNPay</div>
                                         <div className="text-sm text-gray-400">
                                             Pay online via VNPay gateway
                                         </div>
@@ -359,6 +402,75 @@ export default function Payment() {
                             Back to Bookings
                         </button>
                     </div>
+                )}
+
+                {/* QR Code Modal */}
+                {showQrModal && qrCodeUrl && (
+                    <>
+                        {/* Backdrop */}
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-75 z-40"
+                            onClick={() => setShowQrModal(false)}
+                        />
+                        
+                        {/* Modal */}
+                        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg shadow-2xl z-50 p-6 max-w-md w-full">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-xl font-bold text-white">📱 Scan QR Code to Pay</h3>
+                                <button 
+                                    onClick={() => setShowQrModal(false)}
+                                    className="text-gray-400 hover:text-white text-3xl"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            
+                            <div className="bg-white p-4 rounded-lg mb-4">
+                                <img 
+                                    src={qrCodeUrl} 
+                                    alt="QR Code Payment" 
+                                    className="w-full h-auto"
+                                />
+                            </div>
+                            
+                            <div className="space-y-3 mb-4">
+                                <div className="bg-blue-900/30 border border-blue-500 rounded p-3">
+                                    <p className="text-sm text-gray-300">
+                                        💰 Amount: <span className="font-bold text-white">{paymentInfo.amount.toLocaleString()} VND</span>
+                                    </p>
+                                </div>
+                                <div className="bg-yellow-900/30 border border-yellow-500 rounded p-3">
+                                    <p className="text-sm text-yellow-200">
+                                        ⚠️ Please scan this QR code using your banking app to complete the payment.
+                                    </p>
+                                </div>
+                                <div className="bg-gray-700 rounded p-3">
+                                    <p className="text-xs text-gray-400">
+                                        📝 After successful payment, please contact staff to confirm. The system may take a few minutes to update payment status.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowQrModal(false);
+                                        // Navigate to PaymentSuccess with payment info
+                                        navigate(`/payment-success?status=success&paymentId=${paymentInfo.paymentId}&method=QR`);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition"
+                                >
+                                    ✅ I've Paid
+                                </button>
+                                <button
+                                    onClick={() => setShowQrModal(false)}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
         </div>
